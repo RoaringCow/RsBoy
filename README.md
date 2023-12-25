@@ -1,2 +1,2 @@
 # RsBoy
-Gameboy emulator written in rust
+Gameboy emulator that WILL be written rust
