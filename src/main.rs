@@ -1,4 +1,5 @@
-
+mod instructions;
+mod cpu;
 
 
 
@@ -43,7 +44,7 @@
 fn main() {
 
 
-
-
+    let a: u8 = 0b01000100;
+    println!("{:?}", instructions::Instruction::new(a));
 
 }

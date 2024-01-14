@@ -3,9 +3,25 @@
 
 
 struct CPU {
-    registers: [u8; 16], 
+    /*
+        000 - Register B
+        001 - Register C
+        010 - Register D
+        011 - Register E
+        100 - Register H
+        101 - Register L
+        110 - Register HL (H + L)
+        111 - Register A
+    */
+    /*
+        Register Pair ss
+        BC 00
+        DE 01
+        HL 10
+        SP 11
+    */
+    regs: [u8; 7],
     memory: [u8; 4096],
-    index: u16,
     pc: u16,
     stack: [u16; 16],
     sp: u16,
@@ -49,6 +65,50 @@ struct CPU {
 
 
 */
+}
+impl CPU {
 
+
+    fn new() -> CPU {
+        CPU {
+            regs: [0; 7],
+            memory: [0; 4096],
+            pc: 0,
+            stack: [0; 16],
+            sp: 0,
+            flags: 0,
+        }
+    }
+
+
+
+    fn register_decoder(byte: u8) -> u8 {
+        // the user of this function will have to shift the byte 
+        // according to the opcode.
+        
+        /*
+        000 - Register B
+        001 - Register C
+        010 - Register D
+        011 - Register E
+        100 - Register H
+        101 - Register L
+        110 - Register HL (H + L)
+        111 - Register A
+        */
+         let register = match byte {
+            0b111 => 0, // A
+            0b000 => 1, // B
+            0b001 => 2, // C
+            0b010 => 3, // D
+            0b011 => 4, // E
+            0b100 => 5, // H
+            0b101 => 6, // L
+
+            _ => panic!("Invalid register code"),
+        };
+        register
+    }
 
 }
+
