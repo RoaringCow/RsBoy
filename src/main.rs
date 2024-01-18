@@ -44,7 +44,26 @@ mod cpu;
 fn main() {
 
 
-    let a: u8 = 0b01000100;
+    let a: u8 = 0x46;
     println!("{:?}", instructions::Instruction::new(a));
+
+}
+
+
+
+
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use crate::instructions::Instruction; 
+
+    #[test]
+    fn test_instructions() {
+        assert_eq!(instructions::Instruction::new(0x46), Some(Instruction::LoadRegfromHL(0)));
+        //assert_eq!(instructions::Instruction::new(0x76), Some(Instruction::Halt));
+        assert_eq!(instructions::Instruction::new(0x86), Some(Instruction::AddfromHL));
+    }
 
 }
