@@ -43,7 +43,6 @@ mod cpu;
 
 fn main() {
 
-
     let a: u8 = 0x46;
     println!("{:?}", instructions::Instruction::new(a));
 

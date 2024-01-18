@@ -1,11 +1,25 @@
+use std::collections::HashMap;
+
 pub type Address = u16;
 pub type Register = u8;
 
+
+//const INSTRUCTIN_MAP_1: HashMap<u8 ,Instruction>
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Instruction { 
+    NOP,
+    Stop,
+    JumpIFZreset,
+    JumpIFZset,
+    JumpIFCreset,
+    JumpIFCset,
+
     LoadRegfromReg(Register, Register), // check if its reg
     LoadRegfromValue(Register, u8),
     LoadRegfromHL(Register),
+    
+    Load16bitRegfromInstant(Register),
 
     AddfromReg(Register),
     AddfromHL,
@@ -32,6 +46,7 @@ pub enum Instruction {
     Halt,
 }
 impl Instruction {
+
     /*
         000 - Register B
         001 - Register C
@@ -49,10 +64,68 @@ impl Instruction {
         HL 10
         SP 11
     */
+    const INSTRUCTION_MAP_1: HashMap<i32, Instruction> = HashMap::from([
+        (0x00, Instruction::NOP),
+        (0x10, Instruction::Stop),
+        (0x20, Instruction::JumpIFZreset),
+        (0x30, Instruction::JumpIFCreset),
+
+        (0x01, Instruction::Load16bitRegfromInstant(0b00)),
+        (0x11, Instruction::Load16bitRegfromInstant(0b01)),
+        (0x21, Instruction::Load16bitRegfromInstant(0b10)),
+        (0x31, Instruction::Load16bitRegfromInstant(0b11)),
+
+        (0x02, Instruction::),
+        (0x12, Instruction::),
+        (0x22, Instruction::),
+        (0x32, Instruction::),
+
+
+        (0x03, Instruction::),
+        (0x13, Instruction::),
+        (0x23, Instruction::),
+        (0x33, Instruction::),
+
+
+        (0x04, Instruction::),
+        (0x14, Instruction::),
+        (0x24, Instruction::),
+        (0x34, Instruction::),
+
+        (0x05, Instruction::),
+        (0x15, Instruction::),
+        (0x25, Instruction::),
+        (0x35, Instruction::),
+
+        (0x06, Instruction::),
+        (0x16, Instruction::),
+        (0x26, Instruction::),
+        (0x36, Instruction::),
+
+        (0x07, Instruction::),
+        (0x17, Instruction::),
+        (0x27, Instruction::),
+        (0x37, Instruction::),
+
+        (0x08, Instruction::),
+        (0x18, Instruction::),
+        (0x28, Instruction::),
+        (0x38, Instruction::),
+
+        (0x09, Instruction::),
+        (0x19, Instruction::),
+        (0x29, Instruction::),
+        (0x39, Instruction::),
+    ]);
+
+
     pub fn new(opcode: u8) -> Option<Instruction> {
         match opcode >> 6 {
             0b00 => {
+                // I couldn't use a pattern in this part
+                // so i will just use a hashmap
                 todo!();
+
             },
 
             0b01 => {
