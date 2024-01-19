@@ -1,5 +1,6 @@
 
 
+
 pub struct Register {
     pub a: u8,
     pub f: u8, // The F register is indirectly accessible by the programer.
@@ -26,20 +27,20 @@ impl Register {
     pub fn get_hl(&self) -> u16 {
         (u16::from(self.h) << 8) | u16::from(self.l)
     }
-    pub fn set_af(&self, input: u16) {
+    pub fn set_af(&mut self, input: u16) {
         self.a = (input >> 8) as u8;
         self.f = (input & 0xF0) as u8; // f register doesnt allow writing
                                        // to bits 0-3
     }
-    pub fn set_bc(&self, input: u16) {
+    pub fn set_bc(&mut self, input: u16) {
         self.b = (input >> 8) as u8;
         self.c = (input & 0xFF) as u8;
     }
-    pub fn set_de(&self, input: u16) {
+    pub fn set_de(&mut self, input: u16) {
         self.d = (input >> 8) as u8;
         self.e = (input & 0xFF) as u8;
     }
-    pub fn set_hl(&self, input: u16) {
+    pub fn set_hl(&mut self, input: u16) {
         self.h = (input >> 8) as u8;
         self.l = (input & 0xFF) as u8;
     }

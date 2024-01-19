@@ -1,6 +1,6 @@
 use crate::registers::Register;
 
-struct CPU {
+pub struct CPU {
     registers: Register,
     memory: [u8; 0xFFFF],
     halted: bool,
@@ -30,11 +30,25 @@ impl CPU {
             ei: false,
         }
     }
+    
+    fn decode_register(&mut self, register: u8) -> &mut u8{
+       return match register {
+           0b000 => &mut self.registers.b,
+           0b001 => &mut self.registers.c,
+           0b010 => &mut self.registers.d,
+           0b011 => &mut self.registers.e,
+           0b100 => &mut self.registers.h,
+           0b101 => &mut self.registers.l,
+           0b111 => &mut self.registers.a,
+           _ => {panic!("this register does not exist!")}
+       };
+
+    }
 
     fn fetch_instruction() {
         
     }
-    
+     
     fn run_instruction(&mut self, opcode: u8) {
         
         match opcode >> 6 {
@@ -45,21 +59,26 @@ impl CPU {
 
             },
 
+            // Load / Halt
             0b01 => {
+                // first register
                 let first = (opcode & 0b00111000) >> 3;
-                if opcode << 4 == 0x6 {
+                if opcode & 0xF == 0x6 || opcode & 0xF == 0xE {
                     if opcode >> 4 == 0x7 {
                         // HALT
+                        self.halted = true;
                     }
                     //Load register from HL
+                    *self.decode_register(first) = self.memory[self.registers.get_hl() as usize];  
                 }
                 let second = opcode & 0b00000111;
                 //Load register from register
+                *self.decode_register(first) = *self.decode_register(second);
             },
 
             0b10 => {
                 match opcode >> 4 & 0b0011 {
-                    //only get 4 and 5. bits 
+                    //only get 4 and 5. bits to identify aritmetic operation 
                         
                     // ADD/ADC
                     0b00 => {

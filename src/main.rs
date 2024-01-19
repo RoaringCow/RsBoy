@@ -41,9 +41,7 @@ mod registers;
 
 
 fn main() {
-
-    let a: u8 = 0x46;
-
+    println!("Hello world!");
 }
 
 
