@@ -1,114 +1,143 @@
-
-
-
+use crate::registers::Register;
 
 struct CPU {
-    /*
-        000 - Register B
-        001 - Register C
-        010 - Register D
-        011 - Register E
-        100 - Register H
-        101 - Register L
-        110 - Register HL (H + L)
-        111 - Register A
-    */
-    /*
-        Register Pair ss
-        BC 00
-        DE 01
-        HL 10
-        SP 11
-    */
-    regs: [u8; 7],
-    memory: [u8; 4096],
-    pc: u16,
-    stack: [u16; 16],
-    sp: u16,
-    flags: u8,
-    // flag register structure
-    // 7 6 5 4 3 2 1 0
-    // Z N H C 0 0 0 0
+    registers: Register,
+    memory: [u8; 0xFFFF],
+    halted: bool,
+    ei: bool,
 
-/*
-     *Accumulator: A
-        An 8-bit register for storing data and the results 
-        of arithmetic and logical operations
-     
-
-    Auxiliary registers: B, C, D, E, F, H, and L
-        These serve as auxiliary registers to the accumulator. 
-        As register pairs (BC, DE, HL), they are 8-bit
-        registers that function as data pointers
-
-
-     Program counter: PC
-            A 16-bit register that holds the address data of the program to be executed next.
-            Usually incremented automatically according to the byte count of the fetched instructions. When an
-            instruction with branching is executed, however, immediate data and register contents are loaded
-    
-
-    Stack pointer: SP
-            A 16-bit register that holds the starting address of the stack area of memory.
-            The contents of the stack pointer are decremented when a subroutine CALL instruction or PUSH
-            instruction is executed or when an interrupt occurs and incremented when a return instruction or pop
-            instruction is executed.
-
-
-    Flag Register: F
-        Consists of 4 flags that are set and reset according to the results of instruction execution.
-        Flags CY and Z are tested by various conditional branch instructions.
-        Z: Set to 1 when the result of an operation is 0; otherwise reset.
-        N: Set to 1 following execution of the substruction instruction, regardless of the result.
-        H: Set to 1 when an operation results in carrying from or borrowing to bit 3.
-        CY: Set to 1 when an operation results in carrying from or borrowing to bit 7.
-
-
-*/
 }
 impl CPU {
 
 
     fn new() -> CPU {
         CPU {
-            regs: [0; 7],
-            memory: [0; 4096],
-            pc: 0,
-            stack: [0; 16],
-            sp: 0,
-            flags: 0,
+
+            registers: Register {
+                a: 0x0,
+                f: 0x0,
+                b: 0x0,
+                c: 0x0,
+                d: 0x0,
+                e: 0x0,
+                h: 0x0,
+                l: 0x0,
+                sp: 0xFFFe,
+                pc: 0x0,
+            },
+            memory: [0; 0xFFFF],
+            halted: false,
+            ei: false,
         }
     }
 
-
-
-    fn register_decoder(byte: u8) -> u8 {
-        // the user of this function will have to shift the byte 
-        // according to the opcode.
+    fn fetch_instruction() {
         
-        /*
-        000 - Register B
-        001 - Register C
-        010 - Register D
-        011 - Register E
-        100 - Register H
-        101 - Register L
-        110 - Register HL (H + L)
-        111 - Register A
-        */
-         let register = match byte {
-            0b111 => 0, // A
-            0b000 => 1, // B
-            0b001 => 2, // C
-            0b010 => 3, // D
-            0b011 => 4, // E
-            0b100 => 5, // H
-            0b101 => 6, // L
-
-            _ => panic!("Invalid register code"),
-        };
-        register
     }
+    
+    fn run_instruction(&mut self, opcode: u8) {
+        
+        match opcode >> 6 {
+            0b00 => {
+                // I couldn't use a pattern in this part
+                // so i will just make it manually
+                todo!();
 
-}
+            },
+
+            0b01 => {
+                let first = (opcode & 0b00111000) >> 3;
+                if opcode << 4 == 0x6 {
+                    if opcode >> 4 == 0x7 {
+                        // HALT
+                    }
+                    //Load register from HL
+                }
+                let second = opcode & 0b00000111;
+                //Load register from register
+            },
+
+            0b10 => {
+                match opcode >> 4 & 0b0011 {
+                    //only get 4 and 5. bits 
+                        
+                    // ADD/ADC
+                    0b00 => {
+                        if opcode > 0x87 {
+                            // It's 87 and not 86 because 0x87 is ADD A, A 
+                            // without the carry
+                            if opcode == 0x8E {
+                                // Add from HL with carry
+                            }
+                            // Add from register with carry
+
+                        }
+                        if opcode == 0x86 {
+                            // Add from carry
+                        }
+                        // Add from Register
+                    },
+
+                    // SUB/SBC
+                    0b01 => {
+                        if opcode > 0x97 {
+                            if opcode == 0x9E {
+                                // subtract from HL with carry
+                            }
+                            // subtract from register with carry
+                        } 
+                        if opcode == 0x96 {
+                            // subtract from HL 
+                        }
+                        // subtract from register
+                    },
+
+                    // AND/XOR
+                    0b10 => {
+                        if opcode > 0xA7 {
+                            if opcode == 0xAE {
+                                // XOR HL
+                            }
+                            //XOR REGİSTER
+                        }
+                        if opcode == 0xA6 {
+                            // AND HL
+                        }
+                        // AND REGİSTER
+
+                    },
+                    //OR/CP
+                    0b11 => {
+                        if opcode > 0xB7 {
+                            if opcode == 0xBE {
+                                // CP Reg
+                            }
+                            // CP HL
+                        }
+                        if opcode == 0xB6 {
+                            // OR HL
+                        }
+                        // Or Reg
+                    }
+
+
+                    _ => (),
+                }
+            },
+
+            0b11 => {
+                todo!();
+            },
+
+
+            _ => {
+            }
+
+        }
+
+        }
+
+
+
+    }
 
