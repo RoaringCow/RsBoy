@@ -64,7 +64,8 @@ impl CPU {
                 match opcode {
                     0x00 => (),
                     0x01 => todo!(),
-                    0x02 => 
+
+                    _ => panic!("opcode doesn't exist") 
                 }
                 todo!();
 
