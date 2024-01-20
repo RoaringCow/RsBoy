@@ -67,13 +67,16 @@ impl CPU {
                     if opcode >> 4 == 0x7 {
                         // HALT
                         self.halted = true;
+                    }else {
+                        //Load register from HL
+                        *self.decode_register(first) = self.memory[self.registers.get_hl() as usize];  
                     }
-                    //Load register from HL
-                    *self.decode_register(first) = self.memory[self.registers.get_hl() as usize];  
                 }
-                let second = opcode & 0b00000111;
-                //Load register from register
-                *self.decode_register(first) = *self.decode_register(second);
+                else {
+                    let second = opcode & 0b00000111;
+                    //Load register from register
+                    *self.decode_register(first) = *self.decode_register(second);
+                }
             },
 
             0b10 => {
@@ -82,19 +85,61 @@ impl CPU {
                         
                     // ADD/ADC
                     0b00 => {
+                        let mut flag = 0;
+                        let sum: u16;
                         if opcode > 0x87 {
                             // It's 87 and not 86 because 0x87 is ADD A, A 
                             // without the carry
                             if opcode == 0x8E {
                                 // Add from HL with carry
-                            }
-                            // Add from register with carry
+                                let value = self.memory[self.registers.get_hl() as usize];
+                                sum = value as u16 + self.registers.a as u16 + (self.registers.f as u16 & 0b00010000);
+                                
+                                if value & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                    flag |= 0b001;
+                                }
 
+                            }
+                            else {
+                                // Add from register with carry
+                                let value = *self.decode_register(opcode & 0x0F);
+                                sum = self.registers.a as u16 + value as u16 + (self.registers.f as u16 & 0b00010000);
+                                
+                                if (value & 0x0F) + self.registers.a & 0x0F + self.registers.f & 0b00010000 > 0x0F {
+                                    flag |= 0b001;
+                                }
+                            }
+
+                        }else if opcode == 0x86 {
+                            // Add from HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            sum = value as u16 + self.registers.a as u16;
+                    
+                            if value & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                flag |= 0b001;
+                            }
+
+
+                        } else {
+                            // Add from Register
+                            let value = *self.decode_register(opcode & 0x0F);
+                            sum = self.registers.a as u16 + value as u16;
+
+                            if  & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                flag |= 0b001;
+                            }
                         }
-                        if opcode == 0x86 {
-                            // Add from carry
+
+
+                        if sum > 0xFF {
+                            flag |= 0b0001;
+                        }else if sum == 0x0 {
+                            flag |= 0b1;
                         }
-                        // Add from Register
+
+                        self.registers.f = flag;
+                    
+
                     },
 
                     // SUB/SBC

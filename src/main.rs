@@ -42,6 +42,9 @@ mod registers;
 
 fn main() {
     println!("Hello world!");
+    let x: u8 = 240;
+    let y: u8 = 250;
+    println!("{}", (x as u16 + y as u16) as u8);
 }
 
 
