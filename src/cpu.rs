@@ -188,7 +188,7 @@ impl CPU {
                     // AND/XOR
                     0b10 => {
                         if opcode > 0xA7 {
-                            self.registers.f |= 0;
+                            self.registers.f = 0;
                             if opcode == 0xAE {
                                 // XOR HL
                                 self.registers.a = self.registers.a ^ self.memory[self.registers.get_hl() as usize];
@@ -196,7 +196,7 @@ impl CPU {
                             //XOR REGİSTER
                             self.registers.a = self.registers.a ^ *self.decode_register(opcode & 0x07);
                         }else {
-                            self.registers.f |= 0b00100000;
+                            self.registers.f = 0b00100000;
                             if opcode == 0xA6 {
                                 // AND HL
                                 self.registers.a = self.memory[self.registers.get_hl() as usize] & self.registers.a;
@@ -211,26 +211,54 @@ impl CPU {
                             self.registers.f |= 0b10000000;
                         }
                     },
+
+                    
                     //OR/CP
                     0b11 => {
                         if opcode > 0xB7 {
+                            self.registers.f = 0b01000000;
+                            let value;
+
+                            // Get the value. Register or [HL] in memory.
                             if opcode == 0xBE {
                                 // CP Reg
-                                if self.register.a & 0x0f < self.decode_register(opcode & 0x07) {
-                                    // önceki yerlerde flag sorunu var mı kontrol et
-                                    // eğer _ varsa dokunma yoksa dokun
-                                    self.registers.f 
-                                }
+                                value = *self.decode_register(opcode & 0x07);
+                                
+                            }else {
+                                // CP HL
+                                value = self.memory[self.registers.get_hl() as usize]
                             }
-                            // CP HL
+
+                            if self.registers.a < value {
+                                // set carry flag
+                                set.registers.f 
+                            }
+                            // It will check zero even if the carry flag part was true
+                            // but i dont really care there wont be any performance difference
+                            if self.registers.a & 0x0f < value {
+                                // set half carry flag
+                                self.registers.f |= 0b00100000;
+                            }else if self.registers.a == value{
+                                // Set zero flag
+                                self.registers.f |= 0b10000000;
+                            }
+
+                        }else {
+                            self.registers.f = 0;
+                            if opcode == 0xB6 {
+                                // OR HL
+                                self.registers.a |= self.memory[self.registers.get_hl() as usize];
+                            }else {    
+                                // Or Reg
+                                self.registers.a |= self.decode_register(opcode & 0x07);
+                            }
+                            if self.registers.a == 0 {
+                                self.registers.f = 0b10000000;
+                            }
                         }
-                        if opcode == 0xB6 {
-                            // OR HL
-                        }
-                        // Or Reg
                     }
-
-
+                    
+                    
                     _ => (),
                 }
             },
