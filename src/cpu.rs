@@ -1,7 +1,7 @@
 use crate::registers::Register;
 
 pub struct CPU {
-    registers: Register,
+    pub registers: Register,
     memory: [u8; 0xFFFF],
     halted: bool,
     ei: bool,
@@ -10,7 +10,7 @@ pub struct CPU {
 impl CPU {
 
 
-    fn new() -> CPU {
+    pub fn new() -> CPU {
         CPU {
 
             registers: Register {
@@ -49,7 +49,7 @@ impl CPU {
         
     }
      
-    fn run_instruction(&mut self, opcode: u8) {
+    pub fn run_instruction(&mut self, opcode: u8) {
         
         match opcode >> 6 {
             0b00 => {
@@ -96,16 +96,18 @@ impl CPU {
                                 sum = value as u16 + self.registers.a as u16 + (self.registers.f as u16 & 0b00010000);
                                 
                                 if value & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                    // Set the half carry flag if the first 4 bits overflow.
                                     flag |= 0b001;
                                 }
 
                             }
                             else {
-                                // Add from register with carry
-                                let value = *self.decode_register(opcode & 0x0F);
-                                sum = self.registers.a as u16 + value as u16 + (self.registers.f as u16 & 0b00010000);
-                                
+                                // get the register value to be added
+                                let value = *self.decode_register(opcode & 0x07);
+                                // add them up with a bigger size in order to see the carry
+                                sum = self.registers.a as u16 + value as u16 + ((self.registers.f >> 4) & 1) as u16;
                                 if (value & 0x0F) + self.registers.a & 0x0F + self.registers.f & 0b00010000 > 0x0F {
+                                    // Set the half carry flag if the first 4 bits overflow.
                                     flag |= 0b001;
                                 }
                             }
@@ -126,6 +128,7 @@ impl CPU {
                             sum = self.registers.a as u16 + value as u16;
 
                             if  & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                // Set the half carry flag if the first 4 bits overflow.
                                 flag |= 0b001;
                             }
                         }
@@ -137,6 +140,7 @@ impl CPU {
                             flag |= 0b1;
                         }
 
+                        self.registers.a = sum as u8;
                         self.registers.f = flag;
                     
 
