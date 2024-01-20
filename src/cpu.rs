@@ -124,7 +124,7 @@ impl CPU {
 
                         } else {
                             // Add from Register
-                            let value = *self.decode_register(opcode & 0x0F);
+                            let value = *self.decode_register(opcode & 0x07);
                             sum = self.registers.a as u16 + value as u16;
 
                             if  & 0x0F + self.registers.a & 0x0F > 0x0F {
@@ -148,37 +148,79 @@ impl CPU {
 
                     // SUB/SBC
                     0b01 => {
+                        let mut flag = 0b01000000;
+                        let value: u16;
                         if opcode > 0x97 {
                             if opcode == 0x9E {
                                 // subtract from HL with carry
-                            }
+                                value = self.memory[self.registers.get_hl() as usize] as u16;
+                            } else {
                             // subtract from register with carry
-                        } 
-                        if opcode == 0x96 {
-                            // subtract from HL 
+                            value = (*self.decode_register(opcode & 0x07) + (self.registers.f >> 4) & 0b1) as u16;
+                            }
+                        }else {
+                            if opcode == 0x96 {
+                                // subtract from HL
+                                value = self.memory[self.registers.get_hl() as usize] as u16;
+                            } else {
+                                // subtract from register
+                                value = *self.decode_register(opcode & 0x07) as u16;
+                            }
                         }
-                        // subtract from register
+
+                        if value > self.registers.a as u16 {
+                            // set carry flag
+                            flag |= 0b00010000;
+                        } else if value as u8 == self.registers.a {
+                            // set zero flag
+                            flag |= 0b10000000;
+                        }
+                        if value as u8 & 0x0F > self.registers.a & 0x0F {
+                            // set half carry flag
+                            flag |= 0b00100000;
+                        }
+
+                        // update flag
+                        self.registers.f = flag;
+                        self.registers.a -= value as u8;
                     },
 
                     // AND/XOR
                     0b10 => {
                         if opcode > 0xA7 {
+                            self.registers.f |= 0;
                             if opcode == 0xAE {
                                 // XOR HL
+                                self.registers.a = self.registers.a ^ self.memory[self.registers.get_hl() as usize];
                             }
                             //XOR REGİSTER
+                            self.registers.a = self.registers.a ^ *self.decode_register(opcode & 0x07);
+                        }else {
+                            self.registers.f |= 0b00100000;
+                            if opcode == 0xA6 {
+                                // AND HL
+                                self.registers.a = self.memory[self.registers.get_hl() as usize] & self.registers.a;
+                            }else {
+                                // AND REGİSTER
+                                self.registers.a = self.registers.a & *self.decode_register(opcode & 0x07);
+                            }
                         }
-                        if opcode == 0xA6 {
-                            // AND HL
-                        }
-                        // AND REGİSTER
 
+                        if self.registers.a == 0 {
+                            // set zero flag if zero
+                            self.registers.f |= 0b10000000;
+                        }
                     },
                     //OR/CP
                     0b11 => {
                         if opcode > 0xB7 {
                             if opcode == 0xBE {
                                 // CP Reg
+                                if self.register.a & 0x0f < self.decode_register(opcode & 0x07) {
+                                    // önceki yerlerde flag sorunu var mı kontrol et
+                                    // eğer _ varsa dokunma yoksa dokun
+                                    self.registers.f 
+                                }
                             }
                             // CP HL
                         }
