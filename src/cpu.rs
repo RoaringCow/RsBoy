@@ -1,5 +1,6 @@
 use crate::registers::Register;
 
+#[allow(dead_code)]
 pub struct CPU {
     pub registers: Register,
     memory: [u8; 0xFFFF],
@@ -9,7 +10,7 @@ pub struct CPU {
 }
 impl CPU {
 
-
+    #[allow(dead_code)]
     pub fn new() -> CPU {
         CPU {
 
@@ -31,6 +32,8 @@ impl CPU {
         }
     }
     
+    // to make the compiler shut the fuck up
+    #[allow(dead_code)]
     fn decode_register(&mut self, register: u8) -> &mut u8{
        return match register {
            0b000 => &mut self.registers.b,
@@ -45,16 +48,24 @@ impl CPU {
 
     }
 
+    #[allow(dead_code)]
     fn fetch_instruction() {
-        
+        todo!();
     }
      
+    #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
         
         match opcode >> 6 {
             0b00 => {
                 // I couldn't use a pattern in this part
                 // so i will just make it manually
+
+                match opcode {
+                    0x00 => (),
+                    0x01 => todo!(),
+                    0x02 => 
+                }
                 todo!();
 
             },
@@ -221,12 +232,12 @@ impl CPU {
 
                             // Get the value. Register or [HL] in memory.
                             if opcode == 0xBE {
-                                // CP Reg
-                                value = *self.decode_register(opcode & 0x07);
-                                
-                            }else {
                                 // CP HL
                                 value = self.memory[self.registers.get_hl() as usize]
+                                
+                            }else {
+                                // CP Reg
+                                value = *self.decode_register(opcode & 0x07);
                             }
 
                             if self.registers.a < value {
