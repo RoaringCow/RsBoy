@@ -231,7 +231,7 @@ impl CPU {
 
                             if self.registers.a < value {
                                 // set carry flag
-                                set.registers.f 
+                                self.registers.f |= 0b00010000;
                             }
                             // It will check zero even if the carry flag part was true
                             // but i dont really care there wont be any performance difference
@@ -250,7 +250,7 @@ impl CPU {
                                 self.registers.a |= self.memory[self.registers.get_hl() as usize];
                             }else {    
                                 // Or Reg
-                                self.registers.a |= self.decode_register(opcode & 0x07);
+                                self.registers.a |= *self.decode_register(opcode & 0x07);
                             }
                             if self.registers.a == 0 {
                                 self.registers.f = 0b10000000;
