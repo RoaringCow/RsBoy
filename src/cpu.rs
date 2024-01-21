@@ -65,6 +65,14 @@ impl CPU {
         self.registers.pc = msb_address << 8 | lsb_address;
     }
      
+    fn call(&mut self) {
+        self.registers.sp -= 1;
+        self.memory[self.registers.sp as usize] = ((self.registers.pc + 3) & 0xFF) as u8;
+        self.registers.sp -= 1;
+        self.memory[self.registers.sp as usize] = ((self.registers.pc + 3) >> 8) as u8;
+        self.jump_16bitaddress();
+    }
+
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
         // TODO? I might make these individual functions that will get called
@@ -81,6 +89,7 @@ impl CPU {
                     0x00 => (),
                     0x10 => todo!(),
 
+                    // JUMPS
                     //Jumps with offset 8bit
                     0x18 => {
                         self.jump_8bitoffset();
@@ -149,7 +158,7 @@ impl CPU {
                             self.registers.pc += 3;
                         }
                     }
-                    0xC3 => {
+                    0xC3 => { // şişko kalp
                         self.jump_16bitaddress();
                     },
 
@@ -157,6 +166,42 @@ impl CPU {
                     0xE9 => {
                         self.registers.pc = self.registers.get_hl();
                     },
+                    
+
+                    // CALLS
+                    // call 16 bit immediate value
+                    0xC4 => {
+                        if self.registers.f >> 7 == 0 {
+                            self.call();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xCC => {
+                        if self.registers.f >> 7 == 1 {
+                            self.call();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xD4 => {
+                        if self.registers.f >> 4 & 1 == 0 {
+                            self.call();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xDC => {
+                        if self.registers.f >> 4 & 1 == 1 {
+                            self.call();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xCD => {
+                       self.call(); 
+                    }
+                   
 
 
                     _ => panic!("opcode doesn't exist") 
