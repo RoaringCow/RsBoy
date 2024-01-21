@@ -13,6 +13,7 @@ pub struct Register {
     pub sp: u16,
     pub pc: u16,
 }
+#[allow(dead_code)]
 impl Register {
 
     pub fn get_af(&self) -> u16 {

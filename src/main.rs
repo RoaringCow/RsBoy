@@ -57,7 +57,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_instructions() {
+    fn test_and() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10101010;
+        cpu.registers.b = 0b01010101;
+        cpu.run_instruction(0xA0);
+        assert_eq!(0b00000000, cpu.registers.a);
+        assert_eq!(cpu.registers.f >> 4, 0b1010);
     }
+    
+    #[test]
+    fn test_or() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10101010;
+        cpu.registers.c = 0b01010101;
+        cpu.run_instruction(0xB1);
+        assert_eq!(cpu.registers.a, 0b11111111);
+        assert_eq!(cpu.registers.f >> 4 ,0);
+    }
+
+    #[test]
+    fn test_xor() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10101010;
+        cpu.registers.c = 0b11111111;
+        cpu.run_instruction(0xA9);
+        assert_eq!(cpu.registers.a, 0b01010101);
+        assert_eq!(cpu.registers.f >> 4, 0);
+    }
+
+    #[test]
+    fn test_cp() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10101010;
+        cpu.registers.c = 0b11111111;
+        cpu.run_instruction(0xB9);
+        assert_eq!(cpu.registers.f >> 4, 0b0111);
+    }
+
+    // Todo test addition
 
 }
