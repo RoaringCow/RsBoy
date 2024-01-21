@@ -52,10 +52,26 @@ impl CPU {
     fn fetch_instruction() {
         todo!();
     }
+
+    fn jump_8bitoffset(&mut self) {
+        let offset = self.memory[(self.registers.pc + 1) as usize] as i16;
+        self.registers.pc = (self.registers.pc as i16 + offset) as u16 + 1;
+        // + 1 is there for value reading. It reads the next address after
+        // the jump instruction to get the offset.
+    }
+    fn jump_16bitaddress(&mut self) {
+        let lsb_address = self.memory[(self.registers.pc + 1) as usize] as u16;
+        let msb_address = self.memory[(self.registers.pc + 2) as usize] as u16;
+        self.registers.pc = msb_address << 8 | lsb_address;
+    }
      
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
-        
+        // TODO? I might make these individual functions that will get called
+        // from a hashmap but i dont think this part is going to affect the 
+        // overall performance. I will certainly do it if the performance is
+        // shit but if it isn't i won't bother. I dont know if hashmap would
+        // be faster.
         match opcode >> 6 {
             0b00 => {
                 // I couldn't use a pattern in this part
@@ -63,7 +79,85 @@ impl CPU {
 
                 match opcode {
                     0x00 => (),
-                    0x01 => todo!(),
+                    0x10 => todo!(),
+
+                    //Jumps with offset 8bit
+                    0x18 => {
+                        self.jump_8bitoffset();
+                    }
+                    0x20 => {
+                        // if Zero flag reset
+                        if self.registers.f >> 7 == 0 {
+                            self.jump_8bitoffset();
+                        }else {
+                            self.registers.pc += 2;
+                        }
+                    },
+                    0x28 => {
+                        // if zero flag set
+                        if self.registers.f >> 7 == 1 {
+                            self.jump_8bitoffset();
+                        }else {
+                            self.registers.pc += 2;
+                        }
+                    },
+                    0x30 => {
+                        // if carry flag reset
+                        if self.registers.f >> 4 & 1 == 0 {
+                            self.jump_8bitoffset();
+                        }else {
+                            self.registers.pc += 2;
+                        }
+                    },
+                    0x38 => {
+                        // if carry flag set
+                        if self.registers.f >> 4 & 1 == 1 {
+                            self.jump_8bitoffset();
+                        }else {
+                            self.registers.pc += 2;
+                        }
+                    },
+
+                    // Jump to address 16 bit immediate value
+                    0xC2 => {
+                        // if zero flag reset
+                        if self.registers.f >> 7 == 0 {
+                            self.jump_16bitaddress();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xCA => {
+                        // if zero flag set 
+                        if self.registers.f >> 7 == 1 {
+                            self.jump_16bitaddress();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xD2 => {
+                        if self.registers.f >> 4 & 1 == 0 {
+                            self.jump_16bitaddress();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xDA => {
+                        if self.registers.f >> 4 & 1 == 1 {
+                            self.jump_16bitaddress();
+                        }else {
+                            self.registers.pc += 3;
+                        }
+                    }
+                    0xC3 => {
+                        self.jump_16bitaddress();
+                    },
+
+                    // Jump to address in HL
+                    0xE9 => {
+                        self.registers.pc = self.registers.get_hl();
+                    },
+
 
                     _ => panic!("opcode doesn't exist") 
                 }
