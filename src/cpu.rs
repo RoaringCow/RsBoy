@@ -73,6 +73,16 @@ impl CPU {
         self.jump_16bitaddress();
     }
 
+    fn return_from_interrupt(&mut self) {
+        self.registers.sp += 1;
+        let mut return_address: u16;
+        return_address = self.memory[self.registers.sp as usize] as u16;
+        self.registers.sp += 1;
+        return_address |= (self.memory[self.registers.sp as usize] as u16) << 8;
+        self.registers.sp += 1;
+        self.registers.pc = return_address;
+    }
+
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
         // TODO? I might make these individual functions that will get called
@@ -80,12 +90,15 @@ impl CPU {
         // overall performance. I will certainly do it if the performance is
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
+        //
+
+
         match opcode >> 6 {
             0b00 => {
                 // I couldn't use a pattern in this part
                 // so i will just make it manually
 
-                match opcode {
+                return match opcode {
                     0x00 => (),
                     0x10 => todo!(),
 
@@ -93,38 +106,34 @@ impl CPU {
                     //Jumps with offset 8bit
                     0x18 => {
                         self.jump_8bitoffset();
-                    }
+                    },
                     0x20 => {
                         // if Zero flag reset
                         if self.registers.f >> 7 == 0 {
                             self.jump_8bitoffset();
-                        }else {
-                            self.registers.pc += 2;
                         }
+                        
                     },
                     0x28 => {
                         // if zero flag set
                         if self.registers.f >> 7 == 1 {
                             self.jump_8bitoffset();
-                        }else {
-                            self.registers.pc += 2;
                         }
+                        
                     },
                     0x30 => {
                         // if carry flag reset
                         if self.registers.f >> 4 & 1 == 0 {
                             self.jump_8bitoffset();
-                        }else {
-                            self.registers.pc += 2;
                         }
+                        
                     },
                     0x38 => {
                         // if carry flag set
                         if self.registers.f >> 4 & 1 == 1 {
                             self.jump_8bitoffset();
-                        }else {
-                            self.registers.pc += 2;
                         }
+                        
                     },
 
                     // Jump to address 16 bit immediate value
@@ -132,31 +141,27 @@ impl CPU {
                         // if zero flag reset
                         if self.registers.f >> 7 == 0 {
                             self.jump_16bitaddress();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xCA => {
                         // if zero flag set 
                         if self.registers.f >> 7 == 1 {
                             self.jump_16bitaddress();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xD2 => {
                         if self.registers.f >> 4 & 1 == 0 {
                             self.jump_16bitaddress();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xDA => {
                         if self.registers.f >> 4 & 1 == 1 {
                             self.jump_16bitaddress();
-                        }else {
-                            self.registers.pc += 3;
                         }
+                        
                     }
                     0xC3 => { // şişko kalp
                         self.jump_16bitaddress();
@@ -173,40 +178,73 @@ impl CPU {
                     0xC4 => {
                         if self.registers.f >> 7 == 0 {
                             self.call();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xCC => {
                         if self.registers.f >> 7 == 1 {
                             self.call();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                    
+                    },
                     0xD4 => {
                         if self.registers.f >> 4 & 1 == 0 {
                             self.call();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xDC => {
                         if self.registers.f >> 4 & 1 == 1 {
                             self.call();
-                        }else {
-                            self.registers.pc += 3;
                         }
-                    }
+                        
+                    },
                     0xCD => {
                        self.call(); 
-                    }
+                    },
+
+                    // RETURN
+                    0xC9 => {
+                        // return without condition
+                        self.return_from_interrupt();
+                    },
+                    0xC0 => {
+                        // if zero flag reset
+                        if self.registers.f >> 7 == 0 {
+                            self.return_from_interrupt();
+                        }
+                        
+                    },
+                    0xC8 => {
+                        // if zero flag set
+                        if self.registers.f >> 7 == 1 {
+                            self.return_from_interrupt();
+                        }
+                        
+                    },
+                    0xD0 => {
+                        // if carry flag reset
+                        if self.registers.f >> 4 & 1 == 0 {
+                            self.return_from_interrupt();
+                        }
+                    
+                    },
+                    0xD8 => {
+                        // if carry flag set
+                        if self.registers.f >> 4 & 1 == 1 {
+                            self.return_from_interrupt();
+                        }
+                        
+                    },
+
+                    // Other 8bit arithmetic operations
+                    0x03 => {
+                        self.registers.set_bc(self.registers.get_bc() + 1);
+                    },
                    
-
-
                     _ => panic!("opcode doesn't exist") 
-                }
-                todo!();
+                };
+                
 
             },
 
@@ -231,7 +269,7 @@ impl CPU {
             },
 
             0b10 => {
-                match opcode >> 4 & 0b0011 {
+                return match opcode >> 4 & 0b0011 {
                     //only get 4 and 5. bits to identify aritmetic operation 
                         
                     // ADD/ADC
@@ -373,7 +411,7 @@ impl CPU {
                             // Get the value. Register or [HL] in memory.
                             if opcode == 0xBE {
                                 // CP HL
-                                value = self.memory[self.registers.get_hl() as usize]
+                                value = self.memory[self.registers.get_hl() as usize];
                                 
                             }else {
                                 // CP Reg
@@ -422,7 +460,7 @@ impl CPU {
             _ => {
             }
 
-        }
+        };
 
         }
 
