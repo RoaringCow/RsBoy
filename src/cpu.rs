@@ -109,7 +109,7 @@ impl CPU {
                 0x00 => 4,
                 0x10 => todo!(),
 
-                // JUMPS
+                // ----------------- Jumps ----------------------
                 //Jumps with offset 8bit
                 0x18 => {
                     self.jump_8bitoffset();
@@ -147,6 +147,7 @@ impl CPU {
 
                 },
 
+                // ------------------ JP [a16] ------------------
                 // Jump to address 16 bit immediate value
                 0xC2 => {
                     // if zero flag reset
@@ -190,7 +191,7 @@ impl CPU {
                 },
 
 
-                // CALLS
+                // ------------------ CALL ------------------
                 // call 16 bit immediate value
                 0xC4 => {
                     if self.registers.f >> 7 == 0 {
@@ -225,7 +226,7 @@ impl CPU {
                     24
                 },
 
-                // RETURN
+                // ------------------ RETURN ------------------
                 0xC9 => {
                     // return without condition
                     self.return_instruction();
@@ -263,7 +264,7 @@ impl CPU {
                     }else { 8 }
 
                 },
-                // other 8bit arithmetic operations
+                // ------------------ ALU 8bit ------------------
                 // INC r8
                 0x04 => {
                     self.registers.b += 1;
@@ -307,8 +308,7 @@ impl CPU {
                     12
                 },
 
-                // Other 16bit arithmetic operations
-                
+                // ------------------ ALU 16bit ------------------ 
                 // INC
                 0x03 => {
                     self.registers.set_bc(self.registers.get_bc() + 1);
@@ -326,6 +326,181 @@ impl CPU {
                     self.registers.sp += 1;
                     8
                 },
+
+                // DEC
+                0x0B => {
+                    self.registers.set_bc(self.registers.get_bc() - 1);
+                    8
+                },
+                0x1B => {
+                    self.registers.set_de(self.registers.get_de() - 1);
+                    8
+                },
+                0x2B => {
+                    self.registers.set_hl(self.registers.get_hl() - 1);
+                    8
+                },
+                0x3B => {
+                    self.registers.sp -= 1;
+                    8
+                },
+
+                // ------------------ ADD HL, r16 ------------------
+                // lots of repetition here but i dont care
+                0x09 => {
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let value = self.registers.get_bc();
+                    let sum = self.registers.get_hl() + value;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.get_hl() & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.set_hl(sum);
+                    8
+                },
+                0x19 => {
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let value = self.registers.get_de();
+                    let sum = self.registers.get_hl() + value;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.get_hl() & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.set_hl(sum);
+                    8
+                },
+                0x29 => {
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let value = self.registers.get_hl();
+                    let sum = self.registers.get_hl() + value;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.get_hl() & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.set_hl(sum);
+                    8
+                },
+                0x39 => {
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let value = self.registers.sp;
+                    let sum = self.registers.get_hl() + value;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.get_hl() & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.set_hl(sum);
+                    8
+                },
+
+                // -----ADD SP with 8 bit immediate value-----
+                0xE8 => {
+                    let value = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let sum = self.registers.sp as i16 + value as i16;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.sp as u8 & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.sp = sum as u16;
+                    16
+                },
+
+
+                
+                // --------------------------------------------------------------
+                // some load operations that are outside of the 0x40 - 0x7F range
+
+                // ------------------ LD r8, d8 ------------------
+                0x06 => {
+                    // load to B
+                    self.registers.b = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x0E => {
+                    // add to C
+                    self.registers.c = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x16 => {
+                    // add to D
+                    self.registers.d = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x1E => {
+                    // add to E
+                    self.registers.e = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x26 => {
+                    // add to H
+                    self.registers.h = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x2E => {
+                    // add to L
+                    self.registers.l = self.memory[(self.registers.pc + 1) as usize];
+                    8
+                },
+                0x36 => {
+                    // add to address HL
+                    self.memory[self.registers.get_hl() as usize] = self.memory[(self.registers.pc + 1) as usize];
+                    12
+                },
+
+                // LD address from 16 bit register, A
+                0x02 => {
+                    self.memory[self.registers.get_bc() as usize] = self.registers.a;
+                    8
+                },
+                0x12 => {
+                    self.memory[self.registers.get_de() as usize] = self.registers.a;
+                    8
+                },
+                0x22 => {
+                    // hl increment
+                    self.memory[self.registers.get_hl() as usize] = self.registers.a;
+                    self.registers.set_hl(self.registers.get_hl() + 1);
+                    8
+                },
+                0x32 => {
+                    // HL decrement
+                    self.memory[self.registers.get_hl() as usize] = self.registers.a;
+                    self.registers.set_hl(self.registers.get_hl() - 1);
+                    8
+                },
+
+                // LD A, address from 16 bit register
+                0x0A => {
+                    self.registers.a = self.memory[self.registers.get_bc() as usize];
+                    8
+                },
+                0x1A => {
+                    self.registers.a = self.memory[self.registers.get_de() as usize];
+                    8
+                },
+                0x2A => {
+                    // HL increment
+                    self.registers.a = self.memory[self.registers.get_hl() as usize];
+                    self.registers.set_hl(self.registers.get_hl() + 1);
+                    8
+                },
+                0x3A => {
+                    // HL decrement
+                    self.registers.a = self.memory[self.registers.get_hl() as usize];
+                    self.registers.set_hl(self.registers.get_hl() - 1);
+                    8
+                },
+
 
                 _ => panic!("opcode doesn't exist") 
             },
@@ -361,7 +536,7 @@ impl CPU {
             0b10 => match opcode >> 4 & 0b0011 {
                 //only get 4 and 5. bits to identify aritmetic operation 
 
-                // ADD/ADC
+                // ------------------ ADD/ADC ------------------
                 0b00 => {
                 let op_cycles;
                 let mut flag = 0;
@@ -429,7 +604,7 @@ impl CPU {
 
             },
 
-            // SUB/SBC
+            // ------------------ SUB/SBC ------------------
             0b01 => {
                 let op_cycles;
                 let mut flag = 0b01000000;
@@ -475,7 +650,7 @@ impl CPU {
                 op_cycles
             },
 
-            // AND/XOR
+            // ------------------ AND/XOR ------------------
             0b10 => {
                 let op_cycles;
                 if opcode > 0xA7 {
@@ -511,7 +686,7 @@ impl CPU {
             },
 
 
-            //OR/CP
+            // ------------------ OR/CP ------------------
             0b11 => {
                 let op_cycles;
                 if opcode > 0xB7 {
