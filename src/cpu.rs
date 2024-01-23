@@ -82,6 +82,16 @@ impl CPU {
         self.registers.sp += 1;
         self.registers.pc = return_address;
     }
+    fn inc_flag_check(&mut self, value: u8) {
+        let mut flag = 0;
+        if value == 0 {
+            flag |= 0b10000000;
+        }
+        if value & 0x0F == 0 {
+            flag |= 0b00100000;
+        }
+        self.registers.f = flag;
+    }
 
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
@@ -90,7 +100,6 @@ impl CPU {
         // overall performance. I will certainly do it if the performance is
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
-        //
 
 
         let cycles: u8 = match opcode >> 6 {
@@ -254,11 +263,68 @@ impl CPU {
                     }else { 8 }
 
                 },
+                // other 8bit arithmetic operations
+                // INC r8
+                0x04 => {
+                    self.registers.b += 1;
+                    self.inc_flag_check(self.registers.b);
+                    4
+                },
+                0x0C => {
+                    self.registers.c += 1;
+                    self.inc_flag_check(self.registers.c);
+                    4
+                },
+                0x14 => {
+                    self.registers.d += 1;
+                    self.inc_flag_check(self.registers.d);
+                    4
+                },
+                0x1C => {
+                    self.registers.e += 1;
+                    self.inc_flag_check(self.registers.e);
+                    4
+                },
+                0x24 => {
+                    self.registers.h += 1;
+                    self.inc_flag_check(self.registers.h);
+                    4
+                },
+                0x2C => {
+                    self.registers.l += 1;
+                    self.inc_flag_check(self.registers.l);
+                    4
+                },
+                0x3C => {
+                    self.registers.a += 1;
+                    self.inc_flag_check(self.registers.a);
+                    4
+                },
+                0x34 => {
+                    let value = self.memory[self.registers.get_hl() as usize];
+                    self.memory[self.registers.get_hl() as usize] = value + 1;
+                    self.inc_flag_check(value + 1);
+                    12
+                },
 
-                // Other 8bit arithmetic operations
+                // Other 16bit arithmetic operations
+                
+                // INC
                 0x03 => {
                     self.registers.set_bc(self.registers.get_bc() + 1);
-                    todo!();
+                    8
+                },
+                0x13 => {
+                    self.registers.set_de(self.registers.get_de() + 1);
+                    8
+                },
+                0x23 => {
+                    self.registers.set_hl(self.registers.get_hl() + 1);
+                    8
+                },
+                0x33 => {
+                    self.registers.sp += 1;
+                    8
                 },
 
                 _ => panic!("opcode doesn't exist") 
