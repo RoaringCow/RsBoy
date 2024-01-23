@@ -105,6 +105,11 @@ impl CPU {
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
+
+
+// --------------------------------------------------------------------
+//                          0x00 --- 0x3F
+// --------------------------------------------------------------------
             0b00 => match opcode {
                 0x00 => 4,
                 0x10 => todo!(),
@@ -286,6 +291,17 @@ impl CPU {
 
                 // --------------------------------------------------------------
                 // some load operations that are outside of the 0x40 - 0x7F range
+                // --------------------------------------------------------------
+                
+                // ------------------ LD [a16], SP ------------------
+                0x08 => {
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let address = msb << 8 | lsb;
+                    self.memory[address as usize] = self.registers.sp as u8;
+                    self.memory[(address + 1) as usize] = (self.registers.sp >> 8) as u8;
+                    20
+                },
 
                 // ------------------ LD r8, d8 ------------------
                 0x06 => {
@@ -324,7 +340,7 @@ impl CPU {
                     12
                 },
 
-                // LD address from 16 bit register, A
+                // ------------------ LD [r16], A ------------------
                 0x02 => {
                     self.memory[self.registers.get_bc() as usize] = self.registers.a;
                     8
@@ -346,7 +362,7 @@ impl CPU {
                     8
                 },
 
-                // LD A, address from 16 bit register
+                // ------------------ LD A, [r16] ------------------
                 0x0A => {
                     self.registers.a = self.memory[self.registers.get_bc() as usize];
                     8
@@ -369,9 +385,101 @@ impl CPU {
                 },
 
 
+                // ------------------ LD r16, d16 ------------------
+                0x01 => {
+                    // load to BC
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    self.registers.set_bc(msb << 8 | lsb);
+                    12
+                },
+                0x11 => {
+                    // load to DE
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    self.registers.set_de(msb << 8 | lsb);
+                    12
+                },
+                0x21 => {
+                    // load to HL
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    self.registers.set_hl(msb << 8 | lsb);
+                    12
+                },
+                0x31 => {
+                    // load to SP
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    self.registers.sp = msb << 8 | lsb;
+                    12
+                },
+
+                // ------------------ ROTATE ------------------
+                // RLCA
+                // Rotate A left. Carry flag is set to the bit that is shifted out
+                // and the rightmost bit is set to the shifted out bit
+                0x07 => {
+                    let mut flag = 0;
+                    if self.registers.a >> 7 == 1 {
+                        flag |= 0b00010000;
+                    }
+                    self.registers.a = self.registers.a << 1 | self.registers.a >> 7;
+                    self.registers.f = flag;
+                    4
+                },
+                // RLA
+                // Rotate A left through carry flag
+                // Carry flag is set to the bit that is shifted out
+                // and the bit that is shifted in is set to the carry flag
+                0x17 => {
+                    let mut flag = 0;
+                    if self.registers.a >> 7 == 1 {
+                        flag |= 0b00010000;
+                    }
+                    self.registers.a = self.registers.a << 1 | (self.registers.f >> 4) & 1;
+                    self.registers.f = flag;
+                    4
+                },
+                // RRCA
+                // Rotate A right. Carry flag is set to the bit that is shifted out
+                // and the leftmost bit is set to the shifted out bit
+                0x0F => {
+                    let mut flag = 0;
+                    if self.registers.a & 1 == 1 {
+                        flag |= 0b00010000;
+                    }
+                    self.registers.a = self.registers.a >> 1 | self.registers.a << 7;
+                    self.registers.f = flag;
+                    4
+                },
+                // RRA
+                // Rotate A right through carry flag
+                // Carry flag is set to the bit that is shifted out
+                // and the bit that is shifted in is set to the carry flag
+                0x1F => {
+                    let mut flag = 0;
+                    if self.registers.a & 1 == 1 {
+                        flag |= 0b00010000;
+                    }
+                    self.registers.a = self.registers.a >> 1 | (self.registers.f >> 4) & 1 << 7;
+                    self.registers.f = flag;
+                    4
+                },
+
+
+
+
                 _ => panic!("opcode doesn't exist") 
             },
 
+
+
+
+
+// --------------------------------------------------------------------
+//                          0x40 --- 0x7F
+// --------------------------------------------------------------------
             // Load / Halt
             0b01 => {
                 if opcode >> 4 == 0x7 {
@@ -400,6 +508,11 @@ impl CPU {
                 }
             },
 
+
+
+// --------------------------------------------------------------------
+//                          0x80 --- 0xBF
+// --------------------------------------------------------------------
             0b10 => match opcode >> 4 & 0b0011 {
                 //only get 4 and 5. bits to identify aritmetic operation 
 
@@ -608,6 +721,11 @@ impl CPU {
                 _ => 0,
             },
 
+
+
+// --------------------------------------------------------------------
+//                          0xC0 --- 0xFF
+// --------------------------------------------------------------------
             0b11 => match opcode {
                 
                 // -----ADD SP with 8 bit immediate value-----
