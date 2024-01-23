@@ -147,123 +147,6 @@ impl CPU {
 
                 },
 
-                // ------------------ JP [a16] ------------------
-                // Jump to address 16 bit immediate value
-                0xC2 => {
-                    // if zero flag reset
-                    if self.registers.f >> 7 == 0 {
-                        self.jump_16bitaddress();
-                        16
-                    }else { 12 }
-
-                },
-                0xCA => {
-                    // if zero flag set 
-                    if self.registers.f >> 7 == 1 {
-                        self.jump_16bitaddress();
-                        16
-                    }else { 12 }
-
-                },
-                0xD2 => {
-                    if self.registers.f >> 4 & 1 == 0 {
-                        self.jump_16bitaddress();
-                        16
-                    }else { 12 }
-
-                },
-                0xDA => {
-                    if self.registers.f >> 4 & 1 == 1 {
-                        self.jump_16bitaddress();
-                        16
-                    }else { 12 }
-
-                }
-                0xC3 => { // şişko kalp
-                    self.jump_16bitaddress();
-                    16
-                },
-
-                // Jump to address in HL
-                0xE9 => {
-                    self.registers.pc = self.registers.get_hl();
-                    4
-                },
-
-
-                // ------------------ CALL ------------------
-                // call 16 bit immediate value
-                0xC4 => {
-                    if self.registers.f >> 7 == 0 {
-                        self.call();
-                        24
-                    }else { 12 }
-
-                },
-                0xCC => {
-                    if self.registers.f >> 7 == 1 {
-                        self.call();
-                        24
-                    }else { 12 }
-
-                },
-                0xD4 => {
-                    if self.registers.f >> 4 & 1 == 0 {
-                        self.call();
-                        24
-                    }else { 12 }
-
-                },
-                0xDC => {
-                    if self.registers.f >> 4 & 1 == 1 {
-                        self.call();
-                        24
-                    }else { 12 }
-
-                },
-                0xCD => {
-                    self.call();
-                    24
-                },
-
-                // ------------------ RETURN ------------------
-                0xC9 => {
-                    // return without condition
-                    self.return_instruction();
-                    16
-                },
-                0xC0 => {
-                    // if zero flag reset
-                    if self.registers.f >> 7 == 0 {
-                        self.return_instruction();
-                        20
-                    }else { 8 }
-
-                },
-                0xC8 => {
-                    // if zero flag set
-                    if self.registers.f >> 7 == 1 {
-                        self.return_instruction();
-                        20
-                    }else { 8 }
-
-                },
-                0xD0 => {
-                    // if carry flag reset
-                    if self.registers.f >> 4 & 1 == 0 {
-                        self.return_instruction();
-                        20
-                    }else { 8 }
-
-                },
-                0xD8 => {
-                    // if carry flag set
-                    if self.registers.f >> 4 & 1 == 1 {
-                        self.return_instruction();
-                        20
-                    }else { 8 }
-
-                },
                 // ------------------ ALU 8bit ------------------
                 // INC r8
                 0x04 => {
@@ -400,23 +283,7 @@ impl CPU {
                     8
                 },
 
-                // -----ADD SP with 8 bit immediate value-----
-                0xE8 => {
-                    let value = self.memory[(self.registers.pc + 1) as usize];
-                    self.registers.f = self.registers.f & 0b10000000;
-                    let sum = self.registers.sp as i16 + value as i16;
-                    if sum > 0xFF {
-                        self.registers.f |= 0b00010000;
-                    }
-                    if value & 0x0F + self.registers.sp as u8 & 0x0F > 0x0F {
-                        self.registers.f |= 0b00100000;
-                    }
-                    self.registers.sp = sum as u16;
-                    16
-                },
 
-
-                
                 // --------------------------------------------------------------
                 // some load operations that are outside of the 0x40 - 0x7F range
 
@@ -538,220 +405,355 @@ impl CPU {
 
                 // ------------------ ADD/ADC ------------------
                 0b00 => {
-                let op_cycles;
-                let mut flag = 0;
-                let sum: u16;
-                if opcode > 0x87 {
-                    // It's 87 and not 86 because 0x87 is ADD A, A 
-                    // without the carry
-                    if opcode == 0x8E {
-                        // Add from HL with carry
+                    let op_cycles;
+                    let mut flag = 0;
+                    let sum: u16;
+                    if opcode > 0x87 {
+                        // It's 87 and not 86 because 0x87 is ADD A, A 
+                        // without the carry
+                        if opcode == 0x8E {
+                            // Add from HL with carry
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            sum = value as u16 + self.registers.a as u16 + (self.registers.f as u16 & 0b00010000);
+
+                            if value & 0x0F + self.registers.a & 0x0F > 0x0F {
+                                // Set the half carry flag if the first 4 bits overflow.
+                                flag |= 0b001;
+                            }
+                            op_cycles = 8;
+
+                        }
+                        else {
+                            // get the register value to be added
+                            let value = *self.decode_register(opcode & 0x07);
+                            // add them up with a bigger size in order to see the carry
+                            sum = self.registers.a as u16 + value as u16 + ((self.registers.f >> 4) & 1) as u16;
+                            if (value & 0x0F) + self.registers.a & 0x0F + self.registers.f & 0b00010000 > 0x0F {
+                                // Set the half carry flag if the first 4 bits overflow.
+                                flag |= 0b001;
+                            }
+                            op_cycles = 4;
+                        }
+
+                    }else if opcode == 0x86 {
+                        // Add from HL
                         let value = self.memory[self.registers.get_hl() as usize];
-                        sum = value as u16 + self.registers.a as u16 + (self.registers.f as u16 & 0b00010000);
+                        sum = value as u16 + self.registers.a as u16;
 
                         if value & 0x0F + self.registers.a & 0x0F > 0x0F {
-                            // Set the half carry flag if the first 4 bits overflow.
                             flag |= 0b001;
                         }
                         op_cycles = 8;
 
-                    }
-                    else {
-                        // get the register value to be added
+                    } else {
+                        // Add from Register
                         let value = *self.decode_register(opcode & 0x07);
-                        // add them up with a bigger size in order to see the carry
-                        sum = self.registers.a as u16 + value as u16 + ((self.registers.f >> 4) & 1) as u16;
-                        if (value & 0x0F) + self.registers.a & 0x0F + self.registers.f & 0b00010000 > 0x0F {
+                        sum = self.registers.a as u16 + value as u16;
+
+                        if  & 0x0F + self.registers.a & 0x0F > 0x0F {
                             // Set the half carry flag if the first 4 bits overflow.
                             flag |= 0b001;
                         }
                         op_cycles = 4;
                     }
 
-                }else if opcode == 0x86 {
-                    // Add from HL
-                    let value = self.memory[self.registers.get_hl() as usize];
-                    sum = value as u16 + self.registers.a as u16;
 
-                    if value & 0x0F + self.registers.a & 0x0F > 0x0F {
-                        flag |= 0b001;
+                    if sum > 0xFF {
+                        flag |= 0b0001;
+                    }else if sum == 0x0 {
+                        flag |= 0b1;
                     }
-                    op_cycles = 8;
 
-                } else {
-                    // Add from Register
-                    let value = *self.decode_register(opcode & 0x07);
-                    sum = self.registers.a as u16 + value as u16;
+                    self.registers.a = sum as u8;
+                    self.registers.f = flag;
 
-                    if  & 0x0F + self.registers.a & 0x0F > 0x0F {
-                        // Set the half carry flag if the first 4 bits overflow.
-                        flag |= 0b001;
-                    }
-                    op_cycles = 4;
-                }
+                    op_cycles
 
+                },
 
-                if sum > 0xFF {
-                    flag |= 0b0001;
-                }else if sum == 0x0 {
-                    flag |= 0b1;
-                }
-
-                self.registers.a = sum as u8;
-                self.registers.f = flag;
-
-                op_cycles
-
-            },
-
-            // ------------------ SUB/SBC ------------------
-            0b01 => {
-                let op_cycles;
-                let mut flag = 0b01000000;
-                let value: u16;
-                if opcode > 0x97 {
-                    if opcode == 0x9E {
-                        // subtract from HL with carry
-                        value = self.memory[self.registers.get_hl() as usize] as u16;
-                        op_cycles = 8;
-                    } else {
-                        // subtract from register with carry
-                        value = (*self.decode_register(opcode & 0x07) + (self.registers.f >> 4) & 0b1) as u16;
-                        op_cycles = 4;
-                    }
-                }else {
-                    if opcode == 0x96 {
-                        // subtract from HL
-                        value = self.memory[self.registers.get_hl() as usize] as u16;
-                        op_cycles = 8;
-                    } else {
-                        // subtract from register
-                        value = *self.decode_register(opcode & 0x07) as u16;
-                        op_cycles = 4;
-                    }
-                }
-
-                if value > self.registers.a as u16 {
-                    // set carry flag
-                    flag |= 0b00010000;
-                } else if value as u8 == self.registers.a {
-                    // set zero flag
-                    flag |= 0b10000000;
-                }
-                if value as u8 & 0x0F > self.registers.a & 0x0F {
-                    // set half carry flag
-                    flag |= 0b00100000;
-                }
-
-                // update flag
-                self.registers.f = flag;
-                self.registers.a -= value as u8;
-
-                op_cycles
-            },
-
-            // ------------------ AND/XOR ------------------
-            0b10 => {
-                let op_cycles;
-                if opcode > 0xA7 {
-                    self.registers.f = 0;
-                    if opcode == 0xAE {
-                        // XOR HL
-                        self.registers.a = self.registers.a ^ self.memory[self.registers.get_hl() as usize];
-                        op_cycles = 8;
+                // ------------------ SUB/SBC ------------------
+                0b01 => {
+                    let op_cycles;
+                    let mut flag = 0b01000000;
+                    let value: u16;
+                    if opcode > 0x97 {
+                        if opcode == 0x9E {
+                            // subtract from HL with carry
+                            value = self.memory[self.registers.get_hl() as usize] as u16;
+                            op_cycles = 8;
+                        } else {
+                            // subtract from register with carry
+                            value = (*self.decode_register(opcode & 0x07) + (self.registers.f >> 4) & 0b1) as u16;
+                            op_cycles = 4;
+                        }
                     }else {
-                        //XOR REGİSTER
-                        self.registers.a = self.registers.a ^ *self.decode_register(opcode & 0x07);
-                        op_cycles = 4;
-                    }
-                }else {
-                    self.registers.f = 0b00100000;
-                    if opcode == 0xA6 {
-                        // AND HL
-                        self.registers.a = self.memory[self.registers.get_hl() as usize] & self.registers.a;
-                        op_cycles = 8;
-                    }else {
-                        // AND REGİSTER
-                        self.registers.a = self.registers.a & *self.decode_register(opcode & 0x07);
-                        op_cycles = 4;
-                    }
-                }
-
-                if self.registers.a == 0 {
-                    // set zero flag if zero
-                    self.registers.f |= 0b10000000;
-                }
-
-                op_cycles
-            },
-
-
-            // ------------------ OR/CP ------------------
-            0b11 => {
-                let op_cycles;
-                if opcode > 0xB7 {
-                    self.registers.f = 0b01000000;
-                    let value;
-
-                    // Get the value. Register or [HL] in memory.
-                    if opcode == 0xBE {
-                        // CP HL
-                        value = self.memory[self.registers.get_hl() as usize];
-                        op_cycles = 8;
-
-                    }else {
-                        // CP Reg
-                        value = *self.decode_register(opcode & 0x07);
-                        op_cycles = 4;
+                        if opcode == 0x96 {
+                            // subtract from HL
+                            value = self.memory[self.registers.get_hl() as usize] as u16;
+                            op_cycles = 8;
+                        } else {
+                            // subtract from register
+                            value = *self.decode_register(opcode & 0x07) as u16;
+                            op_cycles = 4;
+                        }
                     }
 
-                    if self.registers.a < value {
+                    if value > self.registers.a as u16 {
                         // set carry flag
-                        self.registers.f |= 0b00010000;
+                        flag |= 0b00010000;
+                    } else if value as u8 == self.registers.a {
+                        // set zero flag
+                        flag |= 0b10000000;
                     }
-                    // It will check zero even if the carry flag part was true
-                    // but i dont really care there wont be any performance difference
-                    if self.registers.a & 0x0f < value {
+                    if value as u8 & 0x0F > self.registers.a & 0x0F {
                         // set half carry flag
-                        self.registers.f |= 0b00100000;
-                    }else if self.registers.a == value{
-                        // Set zero flag
+                        flag |= 0b00100000;
+                    }
+
+                    // update flag
+                    self.registers.f = flag;
+                    self.registers.a -= value as u8;
+
+                    op_cycles
+                },
+
+                // ------------------ AND/XOR ------------------
+                0b10 => {
+                    let op_cycles;
+                    if opcode > 0xA7 {
+                        self.registers.f = 0;
+                        if opcode == 0xAE {
+                            // XOR HL
+                            self.registers.a = self.registers.a ^ self.memory[self.registers.get_hl() as usize];
+                            op_cycles = 8;
+                        }else {
+                            //XOR REGİSTER
+                            self.registers.a = self.registers.a ^ *self.decode_register(opcode & 0x07);
+                            op_cycles = 4;
+                        }
+                    }else {
+                        self.registers.f = 0b00100000;
+                        if opcode == 0xA6 {
+                            // AND HL
+                            self.registers.a = self.memory[self.registers.get_hl() as usize] & self.registers.a;
+                            op_cycles = 8;
+                        }else {
+                            // AND REGİSTER
+                            self.registers.a = self.registers.a & *self.decode_register(opcode & 0x07);
+                            op_cycles = 4;
+                        }
+                    }
+
+                    if self.registers.a == 0 {
+                        // set zero flag if zero
                         self.registers.f |= 0b10000000;
                     }
 
-                }else {
-                    self.registers.f = 0;
-                    if opcode == 0xB6 {
-                        // OR HL
-                        self.registers.a |= self.memory[self.registers.get_hl() as usize];
-                        op_cycles = 8;
-                    }else {    
-                        // Or Reg
-                        self.registers.a |= *self.decode_register(opcode & 0x07);
-                        op_cycles = 4;
+                    op_cycles
+                },
+
+
+                // ------------------ OR/CP ------------------
+                0b11 => {
+                    let op_cycles;
+                    if opcode > 0xB7 {
+                        self.registers.f = 0b01000000;
+                        let value;
+
+                        // Get the value. Register or [HL] in memory.
+                        if opcode == 0xBE {
+                            // CP HL
+                            value = self.memory[self.registers.get_hl() as usize];
+                            op_cycles = 8;
+
+                        }else {
+                            // CP Reg
+                            value = *self.decode_register(opcode & 0x07);
+                            op_cycles = 4;
+                        }
+
+                        if self.registers.a < value {
+                            // set carry flag
+                            self.registers.f |= 0b00010000;
+                        }
+                        // It will check zero even if the carry flag part was true
+                        // but i dont really care there wont be any performance difference
+                        if self.registers.a & 0x0f < value {
+                            // set half carry flag
+                            self.registers.f |= 0b00100000;
+                        }else if self.registers.a == value{
+                            // Set zero flag
+                            self.registers.f |= 0b10000000;
+                        }
+
+                    }else {
+                        self.registers.f = 0;
+                        if opcode == 0xB6 {
+                            // OR HL
+                            self.registers.a |= self.memory[self.registers.get_hl() as usize];
+                            op_cycles = 8;
+                        }else {    
+                            // Or Reg
+                            self.registers.a |= *self.decode_register(opcode & 0x07);
+                            op_cycles = 4;
+                        }
+                        if self.registers.a == 0 {
+                            self.registers.f = 0b10000000;
+                        }
                     }
-                    if self.registers.a == 0 {
-                        self.registers.f = 0b10000000;
-                    }
+                    op_cycles
                 }
-                op_cycles
-            }
 
 
-            _ => 0,
-        },
+                _ => 0,
+            },
 
-        0b11 => {
-            todo!();
-        },
+            0b11 => match opcode {
+                
+                // -----ADD SP with 8 bit immediate value-----
+                0xE8 => {
+                    let value = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let sum = self.registers.sp as i16 + value as i16;
+                    if sum > 0xFF {
+                        self.registers.f |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.sp as u8 & 0x0F > 0x0F {
+                        self.registers.f |= 0b00100000;
+                    }
+                    self.registers.sp = sum as u16;
+                    16
+                },
+
+                // ------------------ JP [a16] ------------------
+                // Jump to address 16 bit immediate value
+                0xC2 => {
+                    // if zero flag reset
+                    if self.registers.f >> 7 == 0 {
+                        self.jump_16bitaddress();
+                        16
+                    }else { 12 }
+
+                },
+                0xCA => {
+                    // if zero flag set 
+                    if self.registers.f >> 7 == 1 {
+                        self.jump_16bitaddress();
+                        16
+                    }else { 12 }
+
+                },
+                0xD2 => {
+                    if self.registers.f >> 4 & 1 == 0 {
+                        self.jump_16bitaddress();
+                        16
+                    }else { 12 }
+
+                },
+                0xDA => {
+                    if self.registers.f >> 4 & 1 == 1 {
+                        self.jump_16bitaddress();
+                        16
+                    }else { 12 }
+
+                }
+                0xC3 => { // şişko kalp
+                    self.jump_16bitaddress();
+                    16
+                },
+
+                // Jump to address in HL
+                0xE9 => {
+                    self.registers.pc = self.registers.get_hl();
+                    4
+                },
 
 
-        _ => 0
+                // ------------------ CALL ------------------
+                // call 16 bit immediate value
+                0xC4 => {
+                    if self.registers.f >> 7 == 0 {
+                        self.call();
+                        24
+                    }else { 12 }
 
-    };
-    println!("opcode: {:x} cycles: {}", opcode, cycles);
+                },
+                0xCC => {
+                    if self.registers.f >> 7 == 1 {
+                        self.call();
+                        24
+                    }else { 12 }
 
-}
+                },
+                0xD4 => {
+                    if self.registers.f >> 4 & 1 == 0 {
+                        self.call();
+                        24
+                    }else { 12 }
+
+                },
+                0xDC => {
+                    if self.registers.f >> 4 & 1 == 1 {
+                        self.call();
+                        24
+                    }else { 12 }
+
+                },
+                0xCD => {
+                    self.call();
+                    24
+                },
+
+                // ------------------ RETURN ------------------
+                0xC9 => {
+                    // return without condition
+                    self.return_instruction();
+                    16
+                },
+                0xC0 => {
+                    // if zero flag reset
+                    if self.registers.f >> 7 == 0 {
+                        self.return_instruction();
+                        20
+                    }else { 8 }
+
+                },
+                0xC8 => {
+                    // if zero flag set
+                    if self.registers.f >> 7 == 1 {
+                        self.return_instruction();
+                        20
+                    }else { 8 }
+
+                },
+                0xD0 => {
+                    // if carry flag reset
+                    if self.registers.f >> 4 & 1 == 0 {
+                        self.return_instruction();
+                        20
+                    }else { 8 }
+
+                },
+                0xD8 => {
+                    // if carry flag set
+                    if self.registers.f >> 4 & 1 == 1 {
+                        self.return_instruction();
+                        20
+                    }else { 8 }
+
+                },
+
+
+                _ => 0
+            },
+
+
+            _ => 0
+
+        };
+        println!("opcode: {:x} cycles: {}", opcode, cycles);
+
+    }
 
 
 
