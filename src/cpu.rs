@@ -467,7 +467,63 @@ impl CPU {
                     4
                 },
 
+                // ------------------ DAA ------------------
+                // Decimal adjust register A
+                // This instruction adjusts register A so that the
+                // correct representation of Binary Coded Decimal (BCD)
+                // is obtained.
+                // Some weird stuff
+                // -----------------------------------------
+                0x27 => {
+                    let mut offset = 0_u8;
+                    let mut should_carry:u8 = 0;
 
+                    let a_value = self.registers.a;
+                    let half_carry = self.registers.f >> 5 & 1; 
+                    let carry = self.registers.f >> 4 & 1;
+                    let subtract = self.registers.f >> 6 & 1; 
+
+                    if (subtract == 0 && a_value & 0xF > 0x09) || half_carry == 1 {
+                        offset |= 0x06;
+                    }
+
+                    if (subtract == 0 && a_value > 0x99) || carry == 1 {
+                        offset |= 0x60;
+                        should_carry = 1;
+                    }
+
+
+                    let output = if subtract == 0 {
+                        a_value.wrapping_add(offset)
+                    } else {
+                        a_value.wrapping_sub(offset)
+                    };
+
+                    self.registers.a = output;
+                    self.registers.f = if output == 0 {0b10000000} else {0} 
+                    | (should_carry << 4) | (self.registers.f & 0b01000000);
+                    4 
+                },
+
+                // ------------------ SET CARRY FLAG ------------------
+                0x37 => {
+                    self.registers.f = (self.registers.f & 0b10000000) | 0b00010000;
+                    4
+                },
+
+                // ------------------ COMPLEMENT CARRY FLAG ------------------
+                0x3F => {
+                    self.registers.f = (self.registers.f & 0b10000000) 
+                                    | ((self.registers.f & 0b00010000) ^ 0b00010000);
+                    4
+                },
+
+                // ------------------ CPL ------------------
+                0x2F => {
+                    self.registers.a = !self.registers.a;
+                    self.registers.f |= 0b01100000;
+                    4
+                },
 
 
                 _ => panic!("opcode doesn't exist") 
@@ -869,7 +925,7 @@ impl CPU {
             _ => 0
 
         };
-        println!("opcode: {:x} cycles: {}", opcode, cycles);
+        //println!("opcode: {:x} cycles: {}", opcode, cycles);
 
     }
 

@@ -41,10 +41,17 @@ mod registers;
 
 
 fn main() {
-    println!("Hello world!");
-    let x: u8 = 240;
-    let y: u8 = 250;
-    println!("{}", (x as u16 + y as u16) as u8);
+    let mut cpu = cpu::CPU::new();
+    cpu.registers.a = 0x05;
+    cpu.registers.b = 0x21;
+    println!("{:x} {:x}", cpu.registers.a, cpu.registers.b);
+    cpu.run_instruction(0x90);
+    println!("{:x}", cpu.registers.a);
+    cpu.run_instruction(0x27);
+    println!("{:x}", cpu.registers.a);
+    println!("{:b}", cpu.registers.f);
+    cpu.run_instruction(0x3F);
+    println!("{:b}", cpu.registers.f);
 }
 
 
