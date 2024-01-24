@@ -1053,6 +1053,51 @@ impl CPU {
                 },
 
 
+                // ------------------ PREFIX CB ------------------
+                0xCB => {
+                    self.registers.pc += 1;
+                    let cb_opcode = self.memory[self.registers.pc as usize];
+                    let cycles_cb = match cb_opcode & 0xF0 {
+
+                        // ------------------ RLC/RRC ------------------
+                        // Rotate left/right. Carry flag is set to the bit that is shifted out
+                        // and the rightmost/leftmost bit is set to the shifted out bit
+                        // -----------------------------------------
+
+                /*
+                // RLA
+                // Rotate A left through carry flag
+                // Carry flag is set to the bit that is shifted out
+                // and the bit that is shifted in is set to the carry flag
+                0x17 => {
+                    let mut flag = 0;
+                    if self.registers.a >> 7 == 1 {
+                        flag |= 0b00010000;
+                    }
+                    self.registers.a = self.registers.a << 1 | (self.registers.f >> 4) & 1;
+                    self.registers.f = flag;
+                    4
+                },
+                */ //BUNA BAKARAK YAP
+                        0x00 => {
+                            let mut flag = 0;
+                            if cb_opcode & 0x0F == 0x06 || cb_opcode & 0x0F == 0x0E {
+                                // HL register
+                                16
+                            }else {
+                                // Register
+                                let mut register = self.decode_register(cb_opcode & 0x07);
+                                8
+                            }
+                        },                      
+
+
+
+                        _=> 0
+                    };
+                    4 + cycles_cb
+                },
+
                 _ => 0
             },
 
