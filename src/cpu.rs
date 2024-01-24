@@ -93,6 +93,7 @@ impl CPU {
         self.registers.f = flag;
     }
 
+
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
         // TODO? I might make these individual functions that will get called
@@ -916,6 +917,128 @@ impl CPU {
                     }else { 8 }
 
                 },
+                
+                // some load operations
+                
+                // ------------------ LDH [a8], A ------------------
+                0xE0 => {
+                    let address = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    self.memory[0xFF00 + address as usize] = self.registers.a;
+                    12
+                },
+                // ------------------ LDH A, [a8] ------------------
+                0xF0 => {
+                    let address = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    self.registers.a = self.memory[0xFF00 + address as usize];
+                    12
+                },
+
+                // ------------------ LD [C], A ------------------
+                0xE2 => {
+                    self.memory[0xFF00 + self.registers.c as usize] = self.registers.a;
+                    8
+                },
+                // ------------------ LD A, [C] ------------------
+                0xF2 => {
+                    self.registers.a = self.memory[0xFF00 + self.registers.c as usize];
+                    8
+                },
+                // ------------------ LD [a16], A ------------------
+                0xEA => {
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let address = msb << 8 | lsb;
+                    self.memory[address as usize] = self.registers.a;
+                    16
+                },
+                // ------------------ LD A, [a16] ------------------
+                0xFA => {
+                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
+                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let address = msb << 8 | lsb;
+                    self.registers.a = self.memory[address as usize];
+                    16
+                },
+
+                // ------------------ LD HL, SP+r8 ------------------
+                0xF8 => {
+                    let mut flag = 0;
+                    let value = self.memory[(self.registers.pc + 1) as usize] as u8;
+                    self.registers.f = self.registers.f & 0b10000000;
+                    let sum = self.registers.sp as i16 + value as i16;
+                    if sum > 0xFF {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.sp as u8 & 0x0F > 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    self.registers.f = flag;
+                    self.registers.set_hl(sum as u16);
+                    12
+                },
+
+                // ------------------ LD SP, HL ------------------
+                0xF9 => {
+                    self.registers.sp = self.registers.get_hl();
+                    8
+                },
+
+                // ------------------ PUSH -----------------
+                0xC5 => {
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.c;
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.b;
+                    16
+                },
+                0xD5 => {
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.e;
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.d;
+                    16
+                },
+                0xE5 => {
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.l;
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.h;
+                    16
+                },
+                0xF5 => {
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.f;
+                    self.registers.sp -= 1;
+                    self.memory[self.registers.sp as usize] = self.registers.a;
+                    16
+                },
+
+
+                // ------------------ POP ------------------
+                0xC1 => {
+                    self.registers.b = self.memory[self.registers.sp as usize];
+                    self.registers.c = self.memory[self.registers.sp as usize + 1];
+                    self.registers.sp += 2;
+                    12
+                },
+                0xD1 => {
+                    self.registers.d = self.memory[self.registers.sp as usize];
+                    self.registers.e = self.memory[self.registers.sp as usize + 1];
+                    self.registers.sp += 2;
+                    12
+                },
+                0xE1 => {
+                    self.registers.h = self.memory[self.registers.sp as usize];
+                    self.registers.l = self.memory[self.registers.sp as usize + 1];
+                    self.registers.sp += 2;
+                    12
+                },
+                0xF1 => {
+                    self.registers.a = self.memory[self.registers.sp as usize];
+                    self.registers.f = self.memory[self.registers.sp as usize + 1];
+                    self.registers.sp += 2;
+                    12
+                },
 
 
                 _ => 0
@@ -925,7 +1048,7 @@ impl CPU {
             _ => 0
 
         };
-        //println!("opcode: {:x} cycles: {}", opcode, cycles);
+        println!("opcode: {:x} cycles: {}", opcode, cycles);
 
     }
 
