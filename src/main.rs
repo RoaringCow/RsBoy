@@ -36,12 +36,8 @@ fn main() {
     }
     */
 
-    let mut cpu = cpu::CPU::new();
-    cpu.registers.a = 0b00100100;
-    println!("a: {:b}", cpu.registers.a);
-    cpu.memory[(cpu.registers.pc + 1) as usize] = 0x0F;
-    cpu.run_instruction(0xCB);
-    println!("a: {:b}", cpu.registers.a);
+
+
 
 }
 
@@ -92,7 +88,76 @@ mod tests {
         cpu.run_instruction(0xB9);
         assert_eq!(cpu.registers.f >> 4, 0b0111);
     }
+    
+    #[test]
+    fn test_rrc() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b00100100;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x0F;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b00010010);
+    }
 
-    // Todo test addition
+    #[test]
+    fn test_rlc() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b00100100;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x07;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b01001000);
+    }
+
+    #[test]
+    fn test_rl() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b00100100;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x17;
+        cpu.registers.f = 0b00010000;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b01001001);
+    }
+
+    #[test]
+    fn test_rr() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b00100100;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x1F;
+        cpu.registers.f = 0b00010000;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b10010010);
+    }
+
+    #[test]
+    fn test_sla() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100100;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x27;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b01001000);
+        assert_eq!(cpu.registers.f >> 4, 0b0001);
+    }
+
+    #[test]
+    fn test_sra() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x2F;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b11010010);
+        assert_eq!(cpu.registers.f >> 4, 0b0001);
+    }
+
+    #[test]
+    fn test_swap() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x37;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b01011010);
+        assert_eq!(cpu.registers.f >> 4, 0);
+    }
+
+
+
 
 }
