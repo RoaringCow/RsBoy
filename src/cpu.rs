@@ -3,7 +3,7 @@ use crate::registers::Register;
 #[allow(dead_code)]
 pub struct CPU {
     pub registers: Register,
-    memory: [u8; 0xFFFF],
+    pub memory: [u8; 0xFFFF],
     halted: bool,
     ei: bool,
 
@@ -34,7 +34,7 @@ impl CPU {
 
     // to make the compiler shut the fuck up
     #[allow(dead_code)]
-    fn decode_register(&mut self, register: u8) -> &mut u8{
+    pub fn decode_register(&mut self, register: u8) -> &mut u8{
         return match register {
             0b000 => &mut self.registers.b,
             0b001 => &mut self.registers.c,
@@ -1064,31 +1064,52 @@ impl CPU {
                         // and the rightmost/leftmost bit is set to the shifted out bit
                         // -----------------------------------------
 
-                /*
-                // RLA
-                // Rotate A left through carry flag
-                // Carry flag is set to the bit that is shifted out
-                // and the bit that is shifted in is set to the carry flag
-                0x17 => {
-                    let mut flag = 0;
-                    if self.registers.a >> 7 == 1 {
-                        flag |= 0b00010000;
-                    }
-                    self.registers.a = self.registers.a << 1 | (self.registers.f >> 4) & 1;
-                    self.registers.f = flag;
-                    4
-                },
-                */ //BUNA BAKARAK YAP
                         0x00 => {
                             let mut flag = 0;
-                            if cb_opcode & 0x0F == 0x06 || cb_opcode & 0x0F == 0x0E {
-                                // HL register
-                                16
+                            let cycles_cb;
+                            if cb_opcode < 0x08 {
+                                //------------------ RLC ------------------
+                                if cb_opcode & 0x0F == 0x06 {
+                                    // address HL
+                                    let value = self.memory[self.registers.get_hl() as usize];
+                                    if value >> 7 == 1 {
+                                        flag |= 0b00010000;
+                                    }
+                                    self.memory[self.registers.get_hl() as usize] = value << 1 | value >> 7;
+                                    cycles_cb = 16;
+                                }else {
+                                    // Register
+                                    let register = self.decode_register(cb_opcode & 0x07);
+                                    if *register >> 7 == 1 {
+                                        flag |= 0b00010000;
+                                    }
+                                    *register = *register << 1 | *register >> 7;
+                                    cycles_cb = 8;
+                                }
+                                self.registers.f = flag;
+
                             }else {
-                                // Register
-                                let mut register = self.decode_register(cb_opcode & 0x07);
-                                8
+                                //------------------ RRC ------------------
+                                if opcode & 0x0F == 0x0E {
+                                    // address HL
+                                    let value = self.memory[self.registers.get_hl() as usize];
+                                    if value & 1 == 1 {
+                                        flag |= 0b00010000;
+                                    }
+                                    self.memory[self.registers.get_hl() as usize] = value >> 1 | value << 7;
+                                    cycles_cb = 16; 
+                                }else {
+                                    // Register
+                                    let register = self.decode_register(cb_opcode & 0x07);
+                                    if *register & 1 == 1 {
+                                        flag |= 0b00010000;
+                                    }
+                                    *register = *register >> 1 | *register << 7;
+                                    cycles_cb = 8;
+                                }
                             }
+                            self.registers.f = flag;
+                            cycles_cb
                         },                      
 
 

@@ -1,57 +1,48 @@
+#![allow(unused_imports)]
+use minifb::Key;
 mod cpu;
 mod registers;
-
-
-// Framerate
-// - 59.727500569606 Hz
-
-// CPU
-// - Custom 8-bit Sharp LR35902 (based on modified 8080 and Z80) at 4.19 MHz
-
-// Memory
-// - 64 KB address space including:
-//   - 8 KB of built-in working RAM
-//   - Up to sixteen 8 KB switchable working RAM pages (in game cartridge)
-//   - 8 KB RAM for LCD display
-//   - 32 KB external Game Pak ROM (16 KB switchable)
-// - On-CPU-Die 256-byte bootstrap ROM
-// - Support for 32 KB to 8 MB cartridges
-
-// Resolution
-// - 160 (w) × 144 (h) pixels (10:9 aspect ratio)
-
-// Color Support
-// - 2-bit (four shades of "gray": light to very dark olive green)
-// - Original color scheme: 0x0 0x1 0x2 0x3
-// - Pocket/Light color scheme: 0x0 0x1 0x2 0x3
-
-// Sound
-// - 2 pulse wave generators, 1 PCM 4-bit wave sample channel, 1 noise generator
-// - Audio input from cartridge
-// - One speaker, stereo output through headphone port
-
-// Input
-// - Eight-way control pad
-// - Four action buttons (A, B, Start, Select)
-// - Volume and contrast potentiometers
-// - Power switch
-// - Serial I/O ("Link cable"): 512 kbit/s with up to 4 connections in serial
-// - Cartridge I/O
-
+mod display;
 
 
 fn main() {
+
+    /*
+    let mut display = display::Display::new();
+
+    display.update();
+    let mut y = false;
+    while display.window.is_open() && !display.window.is_key_down(Key::Escape) {
+        let mut x;
+        if y {
+            x = 10;
+        } else {
+            x = 5;
+        }
+        for i in display.buffer.iter_mut() {
+            if x > 5{
+                *i = 0x000000;
+            } else {
+                *i = 0x444444;
+            }
+            x -= 1;
+            if x <= 0 {
+                x = 10;
+            }
+        }
+        y = !y;
+
+        display.update();
+    }
+    */
+
     let mut cpu = cpu::CPU::new();
-    cpu.registers.a = 0x05;
-    cpu.registers.b = 0x21;
-    println!("{:x} {:x}", cpu.registers.a, cpu.registers.b);
-    cpu.run_instruction(0x90);
-    println!("{:x}", cpu.registers.a);
-    cpu.run_instruction(0x27);
-    println!("{:x}", cpu.registers.a);
-    println!("{:b}", cpu.registers.f);
-    cpu.run_instruction(0x3F);
-    println!("{:b}", cpu.registers.f);
+    cpu.registers.a = 0b00100100;
+    println!("a: {:b}", cpu.registers.a);
+    cpu.memory[(cpu.registers.pc + 1) as usize] = 0x0F;
+    cpu.run_instruction(0xCB);
+    println!("a: {:b}", cpu.registers.a);
+
 }
 
 
@@ -72,7 +63,7 @@ mod tests {
         assert_eq!(0b00000000, cpu.registers.a);
         assert_eq!(cpu.registers.f >> 4, 0b1010);
     }
-    
+
     #[test]
     fn test_or() {
         let mut cpu = cpu::CPU::new();
