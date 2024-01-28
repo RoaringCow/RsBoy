@@ -7,6 +7,7 @@ mod display;
 
 fn main() {
 
+    /*
     let mut display = display::Display::new();
 
     display.update();
@@ -33,9 +34,15 @@ fn main() {
 
         display.update();
     }
+    */
 
 
-
+    let mut cpu = cpu::CPU::new();
+    cpu.registers.a = 0b10100101;
+    println!("A: {:08b}", cpu.registers.a);
+    cpu.memory[(cpu.registers.pc + 1) as usize] = 0x37;
+    cpu.run_instruction(0xCB);
+    println!("A: {:08b}", cpu.registers.a);
 
 }
 

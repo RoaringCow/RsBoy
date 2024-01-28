@@ -1054,12 +1054,9 @@ impl CPU {
 
                 // ------------------ PREFIX CB ------------------
                 0xCB => {
-                    self.registers.pc += 1;
-                    let cb_opcode = self.memory[self.registers.pc as usize];
-
+                    let cb_opcode = self.memory[(self.registers.pc + 1) as usize];
+                    println!("{:b}", cb_opcode);
                     let cycles_cb = self.run_cb_prefix(cb_opcode);
-
-
 
                     4 + cycles_cb
                 },
@@ -1071,18 +1068,18 @@ impl CPU {
             _ => 0
 
         };
-        //println!("opcode: {:x} cycles: {}", opcode, cycles);
+        //println!("opcode: {:x}, cycles: {}", opcode, cycles);
 
     }
 
 
     fn run_cb_prefix(&mut self, cb_opcode: u8) -> u8 {
 
+       
+        println!("{:b}   {:b}", cb_opcode & 0b1100000, cb_opcode & 0xF0);
+        let cycles_cb = match cb_opcode & 0b11000000 {
 
-        let cycles_cb = match cb_opcode & 0xF0 {
-
-            0x00 => match cb_opcode {
-
+            0x00 => match cb_opcode & 0xF0 {
                 // ------------------ RLC/RRC ------------------
                 // Rotate left/right. Carry flag is set to the bit that is shifted out
                 // and the rightmost/leftmost bit is set to the shifted out bit
