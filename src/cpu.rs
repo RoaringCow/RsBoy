@@ -292,7 +292,7 @@ impl CPU {
                 // --------------------------------------------------------------
                 // some load operations that are outside of the 0x40 - 0x7F range
                 // --------------------------------------------------------------
-                
+
                 // ------------------ LD [a16], SP ------------------
                 0x08 => {
                     let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
@@ -514,7 +514,7 @@ impl CPU {
                 // ------------------ COMPLEMENT CARRY FLAG ------------------
                 0x3F => {
                     self.registers.f = (self.registers.f & 0b10000000) 
-                                    | ((self.registers.f & 0b00010000) ^ 0b00010000);
+                        | ((self.registers.f & 0b00010000) ^ 0b00010000);
                     4
                 },
 
@@ -533,9 +533,9 @@ impl CPU {
 
 
 
-// --------------------------------------------------------------------
-//                          0x40 --- 0x7F
-// --------------------------------------------------------------------
+            // --------------------------------------------------------------------
+            //                          0x40 --- 0x7F
+            // --------------------------------------------------------------------
             // Load / Halt
             0b01 => {
                 if opcode >> 4 == 0x7 {
@@ -566,9 +566,9 @@ impl CPU {
 
 
 
-// --------------------------------------------------------------------
-//                          0x80 --- 0xBF
-// --------------------------------------------------------------------
+            // --------------------------------------------------------------------
+            //                          0x80 --- 0xBF
+            // --------------------------------------------------------------------
             0b10 => match opcode >> 4 & 0b0011 {
                 //only get 4 and 5. bits to identify aritmetic operation 
 
@@ -779,11 +779,11 @@ impl CPU {
 
 
 
-// --------------------------------------------------------------------
-//                          0xC0 --- 0xFF
-// --------------------------------------------------------------------
+            // --------------------------------------------------------------------
+            //                          0xC0 --- 0xFF
+            // --------------------------------------------------------------------
             0b11 => match opcode {
-                
+
                 // -----ADD SP with 8 bit immediate value-----
                 0xE8 => {
                     let value = self.memory[(self.registers.pc + 1) as usize];
@@ -916,9 +916,9 @@ impl CPU {
                     }else { 8 }
 
                 },
-                
+
                 // some load operations
-                
+
                 // ------------------ LDH [a8], A ------------------
                 0xE0 => {
                     let address = self.memory[(self.registers.pc + 1) as usize] as u16;
@@ -1056,200 +1056,11 @@ impl CPU {
                 0xCB => {
                     self.registers.pc += 1;
                     let cb_opcode = self.memory[self.registers.pc as usize];
-                    let cycles_cb = match cb_opcode & 0xF0 {
 
-                        // ------------------ RLC/RRC ------------------
-                        // Rotate left/right. Carry flag is set to the bit that is shifted out
-                        // and the rightmost/leftmost bit is set to the shifted out bit
-                        // -----------------------------------------
-                        0x00 => {
-                            let mut flag = 0;
-                            let cycles_cb;
-                            if cb_opcode < 0x08 {
-                                //------------------ RLC ------------------
-                                if cb_opcode & 0x0F == 0x06 {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value << 1 | value >> 7;
-                                    cycles_cb = 16;
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register << 1 | *register >> 7;
-                                    cycles_cb = 8;
-                                }
-                                self.registers.f = flag;
-
-                            }else {
-                                //------------------ RRC ------------------
-                                if opcode & 0x0F == 0x0E {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value >> 1 | value << 7;
-                                    cycles_cb = 16; 
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register >> 1 | *register << 7;
-                                    cycles_cb = 8;
-                                }
-                            }
-                            self.registers.f = flag;
-                            cycles_cb
-                        },
-
-                        // ------------------ RL/RR ------------------
-                        // Rotate left/right through carry flag
-                        // Carry flag is set to the bit that is shifted out
-                        // and the bit that is shifted in is set to the carry flag
-                        // -----------------------------------------
-                        0x10 => {
-                            let old_flag = self.registers.f;
-                            let mut flag = 0;
-                            let cycles_cb;
-                            if cb_opcode < 0x18 {
-                                //------------------ RL ------------------
-                                if cb_opcode & 0x0F == 0x06 {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value << 1 | (old_flag >> 4) & 1;
-                                    cycles_cb = 16;
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register << 1 | (old_flag >> 4) & 1;
-                                    cycles_cb = 8;
-                                }
-                            }else {
-                                //------------------ RR ------------------
-                                if cb_opcode & 0x0F == 0x0E {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value >> 1 | ((old_flag >> 4) & 1) << 7;
-                                    cycles_cb = 16;
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register >> 1 | ((old_flag >> 4) & 1) << 7;
-                                    cycles_cb = 8;
-                                }
-                            }
-                            self.registers.f = flag;
-                            cycles_cb
-                        },
-
-                        // ------------------ SLA/SRA ------------------
-                        0x20 => {
-                            let mut flag = 0;
-                            let cycles_cb;
-                            if cb_opcode < 0x28 {
-                                //------------------ SLA ------------------
-                                // Shift left. Carry flag is set to the bit that is shifted out
-                                // and the rightmost bit is set to 0
-                                // -----------------------------------------
-                                if cb_opcode & 0x0F == 0x06 {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value << 1 ;
-                                    cycles_cb = 16;
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register >> 7 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register << 1;
-                                    cycles_cb = 8;
-                                }
-                            }else {
-                                //------------------ SRA ------------------
-                                // Shift right. Carry flag is set to the bit that is shifted out
-                                // and the leftmost bit is not changed
-                                // -----------------------------------------
-                                if cb_opcode & 0x0F == 0x0E {
-                                    // address HL
-                                    let value = self.memory[self.registers.get_hl() as usize];
-                                    if value & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    self.memory[self.registers.get_hl() as usize] = value >> 1 | value & 0b10000000;
-                                    cycles_cb = 16;
-                                }else {
-                                    // Register
-                                    let register = self.decode_register(cb_opcode & 0x07);
-                                    if *register & 1 == 1 {
-                                        flag |= 0b00010000;
-                                    }
-                                    *register = *register >> 1 | *register & 0b10000000; 
-                                    cycles_cb = 8;
-                                }
-                            }
-                            self.registers.f = flag;
-                            cycles_cb
-
-                        },
-
-                        // ------------------ SWAP ------------------
-                        // Swap the upper and lower nibbles of a register
-                        // -----------------------------------------
-                        0x30 => {
-                            let mut flag = 0;
-                            let cycles_cb;
-                            if cb_opcode & 0x0F == 0x06 {
-                                // address HL
-                                let value = self.memory[self.registers.get_hl() as usize];
-                                self.memory[self.registers.get_hl() as usize] = (value & 0x0F) << 4 | (value & 0xF0) >> 4;
-                                if self.memory[self.registers.get_hl() as usize] == 0 {
-                                    flag |= 0b10000000;
-                                }
-                                cycles_cb = 16;
-                            }else {
-                                // Register
-                                let register = self.decode_register(cb_opcode & 0x07);
-                                *register = (*register & 0x0F) << 4 | (*register & 0xF0) >> 4;
-                                if *register == 0 {
-                                    flag |= 0b10000000;
-                                }
-                                cycles_cb = 8;
-                            }
-                            self.registers.f = flag; 
-                            cycles_cb
-                        },
-                        
+                    let cycles_cb = self.run_cb_prefix(cb_opcode);
 
 
 
-
-
-                        _=> 0
-                    };
                     4 + cycles_cb
                 },
 
@@ -1262,6 +1073,269 @@ impl CPU {
         };
         //println!("opcode: {:x} cycles: {}", opcode, cycles);
 
+    }
+
+
+    fn run_cb_prefix(&mut self, cb_opcode: u8) -> u8 {
+
+
+        let cycles_cb = match cb_opcode & 0xF0 {
+
+            0x00 => match cb_opcode {
+
+                // ------------------ RLC/RRC ------------------
+                // Rotate left/right. Carry flag is set to the bit that is shifted out
+                // and the rightmost/leftmost bit is set to the shifted out bit
+                // -----------------------------------------
+                0x00 => {
+                    let mut flag = 0;
+                    let cycles_cb;
+                    if cb_opcode < 0x08 {
+                        //------------------ RLC ------------------
+                        if cb_opcode & 0x0F == 0x06 {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value << 1 | value >> 7;
+                            cycles_cb = 16;
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register << 1 | *register >> 7;
+                            cycles_cb = 8;
+                        }
+                        self.registers.f = flag;
+
+                    }else {
+                        //------------------ RRC ------------------
+                        if cb_opcode & 0x0F == 0x0E {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value >> 1 | value << 7;
+                            cycles_cb = 16; 
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register >> 1 | *register << 7;
+                            cycles_cb = 8;
+                        }
+                    }
+                    self.registers.f = flag;
+                    cycles_cb
+                },
+
+                // ------------------ RL/RR ------------------
+                // Rotate left/right through carry flag
+                // Carry flag is set to the bit that is shifted out
+                // and the bit that is shifted in is set to the carry flag
+                // -----------------------------------------
+                0x10 => {
+                    let old_flag = self.registers.f;
+                    let mut flag = 0;
+                    let cycles_cb;
+                    if cb_opcode < 0x18 {
+                        //------------------ RL ------------------
+                        if cb_opcode & 0x0F == 0x06 {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value << 1 | (old_flag >> 4) & 1;
+                            cycles_cb = 16;
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register << 1 | (old_flag >> 4) & 1;
+                            cycles_cb = 8;
+                        }
+                    }else {
+                        //------------------ RR ------------------
+                        if cb_opcode & 0x0F == 0x0E {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value >> 1 | ((old_flag >> 4) & 1) << 7;
+                            cycles_cb = 16;
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register >> 1 | ((old_flag >> 4) & 1) << 7;
+                            cycles_cb = 8;
+                        }
+                    }
+                    self.registers.f = flag;
+                    cycles_cb
+                },
+
+                // ------------------ SLA/SRA ------------------
+                0x20 => {
+                    let mut flag = 0;
+                    let cycles_cb;
+                    if cb_opcode < 0x28 {
+                        //------------------ SLA ------------------
+                        // Shift left. Carry flag is set to the bit that is shifted out
+                        // and the rightmost bit is set to 0
+                        // -----------------------------------------
+                        if cb_opcode & 0x0F == 0x06 {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value << 1 ;
+                            cycles_cb = 16;
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register >> 7 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register << 1;
+                            cycles_cb = 8;
+                        }
+                    }else {
+                        //------------------ SRA ------------------
+                        // Shift right. Carry flag is set to the bit that is shifted out
+                        // and the leftmost bit is not changed
+                        // -----------------------------------------
+                        if cb_opcode & 0x0F == 0x0E {
+                            // address HL
+                            let value = self.memory[self.registers.get_hl() as usize];
+                            if value & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            self.memory[self.registers.get_hl() as usize] = value >> 1 | value & 0b10000000;
+                            cycles_cb = 16;
+                        }else {
+                            // Register
+                            let register = self.decode_register(cb_opcode & 0x07);
+                            if *register & 1 == 1 {
+                                flag |= 0b00010000;
+                            }
+                            *register = *register >> 1 | *register & 0b10000000; 
+                            cycles_cb = 8;
+                        }
+                    }
+                    self.registers.f = flag;
+                    cycles_cb
+
+                },
+
+                // ------------------ SWAP ------------------
+                // Swap the upper and lower nibbles of a register
+                // -----------------------------------------
+                0x30 => {
+                    let mut flag = 0;
+                    let cycles_cb;
+                    if cb_opcode & 0x0F == 0x06 {
+                        // address HL
+                        let value = self.memory[self.registers.get_hl() as usize];
+                        self.memory[self.registers.get_hl() as usize] = (value & 0x0F) << 4 | (value & 0xF0) >> 4;
+                        if self.memory[self.registers.get_hl() as usize] == 0 {
+                            flag |= 0b10000000;
+                        }
+                        cycles_cb = 16;
+                    }else {
+                        // Register
+                        let register = self.decode_register(cb_opcode & 0x07);
+                        *register = (*register & 0x0F) << 4 | (*register & 0xF0) >> 4;
+                        if *register == 0 {
+                            flag |= 0b10000000;
+                        }
+                        cycles_cb = 8;
+                    }
+                    self.registers.f = flag; 
+                    cycles_cb
+                },
+
+                _=> 0
+            },
+
+
+            // ------------------ BIT ------------------
+            // Test bit in register
+            // -----------------------------------------
+            0x01 => {
+                self.registers.f = self.registers.f & 0b00100000;
+                let cycles: u8;
+                let bit_to_test = cb_opcode >> 3 & 0x07;
+                let value_to_test = {
+                    if cb_opcode & 0x0F == 0b110 {
+                        // address HL
+                        cycles = 16;
+                        self.memory[self.registers.get_hl() as usize]
+                    }else {
+                        // Register
+                        cycles = 8;
+                        *self.decode_register(cb_opcode & 0x07)
+                    }
+                };
+                if value_to_test >> bit_to_test & 1 == 0 {
+                    self.registers.f |= 0b10000000;
+                }
+                cycles
+            },
+
+            // ------------------ RES ------------------
+            // Reset bit in register
+            // -----------------------------------------
+            0x10 => {
+                let cycles: u8;
+                let bit_to_reset = cb_opcode >> 3 & 0x07;
+                if cb_opcode & 0x0F == 0b110 {
+                    // address HL
+                    cycles = 16;
+                    self.memory[self.registers.get_hl() as usize] &= !(1 << bit_to_reset);
+                }else {
+                    // Register
+                    cycles = 8;
+                    *self.decode_register(cb_opcode & 0x07) &= !(1 << bit_to_reset);
+                }
+                cycles
+            },
+
+            // ------------------ SET ------------------
+            // Set bit in register
+            // -----------------------------------------
+            0x11 => {
+                let cycles: u8;
+                let bit_to_set = cb_opcode >> 3 & 0x07;
+                if cb_opcode & 0x0F == 0b110 {
+                    // address HL
+                    cycles = 16;
+                    self.memory[self.registers.get_hl() as usize] |= 1 << bit_to_set;
+                }else {
+                    // Register
+                    cycles = 8;
+                    *self.decode_register(cb_opcode & 0x07) |= 1 << bit_to_set;
+                }
+                cycles
+            },
+
+
+            _=> 0
+        };
+        cycles_cb
     }
 
 

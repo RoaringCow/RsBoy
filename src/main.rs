@@ -7,7 +7,6 @@ mod display;
 
 fn main() {
 
-    /*
     let mut display = display::Display::new();
 
     display.update();
@@ -34,7 +33,6 @@ fn main() {
 
         display.update();
     }
-    */
 
 
 
