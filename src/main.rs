@@ -35,14 +35,13 @@ fn main() {
         display.update();
     }
     */
-
-
     let mut cpu = cpu::CPU::new();
     cpu.registers.a = 0b10100101;
-    println!("A: {:08b}", cpu.registers.a);
-    cpu.memory[(cpu.registers.pc + 1) as usize] = 0x37;
+    println!("{:08b}", cpu.registers.a);
+    cpu.memory[(cpu.registers.pc + 1) as usize] = 0x87;
     cpu.run_instruction(0xCB);
-    println!("A: {:08b}", cpu.registers.a);
+    println!("{:08b}", cpu.registers.a);
+
 
 }
 
@@ -162,6 +161,42 @@ mod tests {
         assert_eq!(cpu.registers.f >> 4, 0);
     }
 
+    #[test]
+    fn test_srl() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x3F;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b01010010);
+        assert_eq!(cpu.registers.f >> 4, 1);
+    }
+
+    #[test]
+    fn test_bit() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x47;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.f >> 4 & 1, 0);
+    }
+
+    #[test]
+    fn test_res() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0x87;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b00100101);
+    }
+
+    #[test]
+    fn test_set() {
+        let mut cpu = cpu::CPU::new();
+        cpu.registers.a = 0b10100101;
+        cpu.memory[(cpu.registers.pc + 1) as usize] = 0xC7;
+        cpu.run_instruction(0xCB);
+        assert_eq!(cpu.registers.a, 0b10100101);
+    }
 
 
 
