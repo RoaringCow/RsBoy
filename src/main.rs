@@ -11,7 +11,8 @@ use std::io::{self, Read};
 
 fn main() {
 
-    /*
+    let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
+    
     let mut display = display::Display::new();
 
     display.update();
@@ -35,10 +36,11 @@ fn main() {
             }
         }
         y = !y;
-
+        
+        
         display.update();
     }
-    */
+    
 
 
     
@@ -57,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_load() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.set_hl(0xC000);
         cpu.write_memory(cpu.registers.get_hl(), 0x01);
         cpu.run_instruction(0x7E);
@@ -65,7 +67,7 @@ mod tests {
     }
     #[test]
     fn test_and() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10101010;
         cpu.registers.b = 0b01010101;
         cpu.run_instruction(0xA0);
@@ -75,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_or() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10101010;
         cpu.registers.c = 0b01010101;
         cpu.run_instruction(0xB1);
@@ -85,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_xor() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10101010;
         cpu.registers.c = 0b11111111;
         cpu.run_instruction(0xA9);
@@ -95,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_cp() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10101010;
         cpu.registers.c = 0b11111111;
         cpu.run_instruction(0xB9);
@@ -104,7 +106,7 @@ mod tests {
     
     #[test]
     fn test_rrc() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b00100100;
         cpu.write_memory(cpu.registers.pc + 1, 0x0F);
         cpu.run_instruction(0xCB);
@@ -113,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_rlc() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b00100100;
         cpu.write_memory(cpu.registers.pc + 1, 0x07);
         cpu.run_instruction(0xCB);
@@ -122,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_rl() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b00100100;
         cpu.write_memory(cpu.registers.pc + 1, 0x17);
         cpu.registers.f = 0b00010000;
@@ -132,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_rr() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b00100100;
         cpu.write_memory(cpu.registers.pc + 1, 0x1F);
         cpu.registers.f = 0b00010000;
@@ -142,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_sla() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100100;
         cpu.write_memory(cpu.registers.pc + 1, 0x27);
         cpu.run_instruction(0xCB);
@@ -152,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_sra() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0x2F);
         cpu.run_instruction(0xCB);
@@ -162,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_swap() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0x37);
         cpu.run_instruction(0xCB);
@@ -172,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_srl() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0x3F);
         cpu.run_instruction(0xCB);
@@ -182,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_bit() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0x47);
         cpu.run_instruction(0xCB);
@@ -191,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_res() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0x87);
         cpu.run_instruction(0xCB);
@@ -200,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_set() {
-        let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/tetris.gb");
+        let mut cpu = cpu::CPU::new("/home/ersan/İndirilenler/tetris.gb");
         cpu.registers.a = 0b10100101;
         cpu.write_memory(cpu.registers.pc + 1, 0xC7);
         cpu.run_instruction(0xCB);

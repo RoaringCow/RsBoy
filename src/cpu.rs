@@ -104,7 +104,7 @@ impl CPU {
     pub fn read_memory(&self, address: u16) -> u8 {
         println!("reading memory at address: {:X}", address);
         match address {
-            0x0000..=0x7FFF => todo!(), // ROM
+            0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.gpu.read_vram(address), // VRAM
             0xA000..=0xBFFF => 0, // External RAM
             0xC000..=0xCFFF => self.memory[address as usize - 0xC000], // RAM
