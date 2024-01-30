@@ -1,5 +1,6 @@
 use crate::registers::Register;
 use crate::gpu::GPU;
+use crate::cartridge::Cartridge;
 #[allow(dead_code)]
 
 
@@ -11,12 +12,12 @@ pub struct CPU {
     halted: bool,
     ei: bool,
     gpu: GPU,
-
+    rom: Cartridge,
 }
 impl CPU {
 
     #[allow(dead_code)]
-    pub fn new() -> CPU {
+    pub fn new(game_rom: &str) -> CPU {
         CPU {
 
             registers: Register {
@@ -35,6 +36,7 @@ impl CPU {
             gpu: GPU::new(),
             halted: false,
             ei: false,
+            rom: Cartridge::new(game_rom),
         }
     }
 
@@ -119,7 +121,7 @@ impl CPU {
     pub fn write_memory(&mut self, address: u16, value: u8) {
         println!("reading memory at address: {:X}", address);
         match address {
-            0x0000..=0x7FFF => todo!(), // ROM
+            0x0000..=0x7FFF => self.rom.switch_bank(value), // ROM
             0x8000..=0x9FFF => self.gpu.write_vram(address, value), // VRAM
             0xA000..=0xBFFF => todo!(), // External RAM
             0xC000..=0xCFFF => self.memory[address as usize - 0xC000] = value, // RAM
