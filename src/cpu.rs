@@ -1,11 +1,16 @@
 use crate::registers::Register;
-
+use crate::gpu::GPU;
 #[allow(dead_code)]
+
+
+
+
 pub struct CPU {
     pub registers: Register,
-    pub memory: [u8; 0xFFFF],
+    pub memory: [u8; 0x2000],
     halted: bool,
     ei: bool,
+    gpu: GPU,
 
 }
 impl CPU {
@@ -23,10 +28,11 @@ impl CPU {
                 e: 0x0,
                 h: 0x0,
                 l: 0x0,
-                sp: 0xFFFe,
-                pc: 0x0,
+                sp: 0xFFFE, // not sure about this
+                pc: 0xC000, //only to test
             },
-            memory: [0; 0xFFFF],
+            memory: [0; 0x2000],
+            gpu: GPU::new(),
             halted: false,
             ei: false,
         }
@@ -49,8 +55,8 @@ impl CPU {
     }
 
     #[allow(dead_code)]
-    fn fetch_instruction() {
-        todo!();
+    fn fetch_instruction(&self) -> u8{
+        self.read_memory(self.registers.pc)
     }
 
     fn jump_8bitoffset(&mut self) {
@@ -93,6 +99,40 @@ impl CPU {
         self.registers.f = flag;
     }
 
+    pub fn read_memory(&self, address: u16) -> u8 {
+        println!("reading memory at address: {:X}", address);
+        match address {
+            0x0000..=0x7FFF => todo!(), // ROM
+            0x8000..=0x9FFF => self.gpu.read_vram(address), // VRAM
+            0xA000..=0xBFFF => 0, // External RAM
+            0xC000..=0xCFFF => self.memory[address as usize - 0xC000], // RAM
+            0xE000..=0xFDFF => self.memory[address as usize - 0xE000], // Echo RAM
+            0xFE00..=0xFE9F => todo!(),//self.gpu.read_oam(address), // OAM
+            0xFEA0..=0xFEFF => 0,// not usable
+            0xFF00..=0xFF7F => todo!(),// IO
+            0xFF80..=0xFFFE => self.memory[address as usize - 0xFF80], // High RAM
+            0xFFFF => 0, // Interrupt Enable Register
+            _ => panic!("address out of range"),
+        }
+    }
+
+    pub fn write_memory(&mut self, address: u16, value: u8) {
+        println!("reading memory at address: {:X}", address);
+        match address {
+            0x0000..=0x7FFF => todo!(), // ROM
+            0x8000..=0x9FFF => self.gpu.write_vram(address, value), // VRAM
+            0xA000..=0xBFFF => todo!(), // External RAM
+            0xC000..=0xCFFF => self.memory[address as usize - 0xC000] = value, // RAM
+            0xE000..=0xFDFF => self.memory[address as usize - 0xE000] = value, // Echo RAM
+            0xFE00..=0xFE9F => todo!(),//self.gpu.read_oam(address), // OAM
+            0xFEA0..=0xFEFF => todo!(),// not usable
+            0xFF00..=0xFF7F => todo!(),// IO
+            0xFF80..=0xFFFE => self.memory[address as usize - 0xFF80] = value, // High RAM
+            0xFFFF => todo!(), // Interrupt Enable Register
+            _ => panic!("address out of range"),
+        };
+    }
+
 
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) {
@@ -101,7 +141,7 @@ impl CPU {
         // overall performance. I will certainly do it if the performance is
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
-
+        
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
@@ -190,8 +230,8 @@ impl CPU {
                     4
                 },
                 0x34 => {
-                    let value = self.memory[self.registers.get_hl() as usize];
-                    self.memory[self.registers.get_hl() as usize] = value + 1;
+                    let value = self.read_memory(self.registers.get_hl());
+                    self.write_memory(self.registers.get_hl(), value + 1);
                     self.inc_flag_check(value + 1);
                     12
                 },
@@ -295,91 +335,93 @@ impl CPU {
 
                 // ------------------ LD [a16], SP ------------------
                 0x08 => {
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     let address = msb << 8 | lsb;
-                    self.memory[address as usize] = self.registers.sp as u8;
-                    self.memory[(address + 1) as usize] = (self.registers.sp >> 8) as u8;
+                    self.write_memory(address, self.registers.sp as u8);
+                    self.write_memory(address + 1, (self.registers.sp >> 8) as u8);
                     20
                 },
 
                 // ------------------ LD r8, d8 ------------------
                 0x06 => {
                     // load to B
-                    self.registers.b = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.b = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x0E => {
                     // add to C
-                    self.registers.c = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.c = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x16 => {
                     // add to D
-                    self.registers.d = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.d = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x1E => {
                     // add to E
-                    self.registers.e = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.e = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x26 => {
                     // add to H
-                    self.registers.h = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.h = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x2E => {
                     // add to L
-                    self.registers.l = self.memory[(self.registers.pc + 1) as usize];
+                    self.registers.l = self.read_memory(self.registers.pc + 1);
                     8
                 },
                 0x36 => {
                     // add to address HL
-                    self.memory[self.registers.get_hl() as usize] = self.memory[(self.registers.pc + 1) as usize];
+                    let value = self.read_memory(self.registers.pc + 1);
+                    self.write_memory(self.registers.get_hl(), value);
                     12
                 },
-
                 // ------------------ LD [r16], A ------------------
                 0x02 => {
-                    self.memory[self.registers.get_bc() as usize] = self.registers.a;
+                    // load to BC
+                    self.write_memory(self.registers.get_bc(), self.registers.a);
                     8
                 },
                 0x12 => {
-                    self.memory[self.registers.get_de() as usize] = self.registers.a;
+                    // load to DE
+                    self.write_memory(self.registers.get_de(), self.registers.a);
                     8
                 },
                 0x22 => {
                     // hl increment
-                    self.memory[self.registers.get_hl() as usize] = self.registers.a;
+                    self.write_memory(self.registers.get_hl(), self.registers.a);
                     self.registers.set_hl(self.registers.get_hl() + 1);
                     8
                 },
                 0x32 => {
                     // HL decrement
-                    self.memory[self.registers.get_hl() as usize] = self.registers.a;
+                    self.write_memory(self.registers.get_hl(), self.registers.a);
                     self.registers.set_hl(self.registers.get_hl() - 1);
                     8
                 },
 
                 // ------------------ LD A, [r16] ------------------
                 0x0A => {
-                    self.registers.a = self.memory[self.registers.get_bc() as usize];
+                    self.registers.a = self.read_memory(self.registers.get_bc());
                     8
                 },
                 0x1A => {
-                    self.registers.a = self.memory[self.registers.get_de() as usize];
+                    self.registers.a = self.read_memory(self.registers.get_de());
                     8
                 },
                 0x2A => {
                     // HL increment
-                    self.registers.a = self.memory[self.registers.get_hl() as usize];
+                    self.registers.a = self.read_memory(self.registers.get_hl());
                     self.registers.set_hl(self.registers.get_hl() + 1);
                     8
                 },
                 0x3A => {
                     // HL decrement
-                    self.registers.a = self.memory[self.registers.get_hl() as usize];
+                    self.registers.a = self.read_memory(self.registers.get_hl());
                     self.registers.set_hl(self.registers.get_hl() - 1);
                     8
                 },
@@ -388,29 +430,29 @@ impl CPU {
                 // ------------------ LD r16, d16 ------------------
                 0x01 => {
                     // load to BC
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     self.registers.set_bc(msb << 8 | lsb);
                     12
                 },
                 0x11 => {
                     // load to DE
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     self.registers.set_de(msb << 8 | lsb);
                     12
                 },
                 0x21 => {
                     // load to HL
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     self.registers.set_hl(msb << 8 | lsb);
                     12
                 },
                 0x31 => {
                     // load to SP
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     self.registers.sp = msb << 8 | lsb;
                     12
                 },
@@ -538,7 +580,7 @@ impl CPU {
             // --------------------------------------------------------------------
             // Load / Halt
             0b01 => {
-                if opcode >> 4 == 0x7 {
+                if opcode & 0x0F == 0x7 {
                     // HALT
                     self.halted = true;
                     4
@@ -547,13 +589,15 @@ impl CPU {
                     let first = (opcode & 0b00111000) >> 3;
                     if opcode & 0xF == 0x6 || opcode & 0xF == 0xE {
                         //Load register from HL
-                        *self.decode_register(first) = self.memory[self.registers.get_hl() as usize]; 
+                        println!("load register from HL");
+                        *self.decode_register(first) = self.read_memory(self.registers.get_hl()); 
                         8
                     }else {
                         let second = opcode & 0b00000111;
                         if opcode & 0xF < 0x8 {
                             //Load register from immediate value
-                            self.memory[self.registers.get_hl() as usize] = *self.decode_register(second);
+                            let value = *self.decode_register(second);
+                            self.write_memory(self.registers.get_hl(), value);
                             8
                         }else {
                             //Load register from register
@@ -581,8 +625,8 @@ impl CPU {
                         // It's 87 and not 86 because 0x87 is ADD A, A 
                         // without the carry
                         if opcode == 0x8E {
-                            // Add from HL with carry
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            // Add from HL addr with carry
+                            let value = self.read_memory(self.registers.get_hl());
                             sum = value as u16 + self.registers.a as u16 + (self.registers.f as u16 & 0b00010000);
 
                             if value & 0x0F + self.registers.a & 0x0F > 0x0F {
@@ -606,7 +650,7 @@ impl CPU {
 
                     }else if opcode == 0x86 {
                         // Add from HL
-                        let value = self.memory[self.registers.get_hl() as usize];
+                        let value = self.read_memory(self.registers.get_hl());
                         sum = value as u16 + self.registers.a as u16;
 
                         if value & 0x0F + self.registers.a & 0x0F > 0x0F {
@@ -648,7 +692,7 @@ impl CPU {
                     if opcode > 0x97 {
                         if opcode == 0x9E {
                             // subtract from HL with carry
-                            value = self.memory[self.registers.get_hl() as usize] as u16;
+                            value = self.read_memory(self.registers.get_hl()) as u16;
                             op_cycles = 8;
                         } else {
                             // subtract from register with carry
@@ -658,7 +702,7 @@ impl CPU {
                     }else {
                         if opcode == 0x96 {
                             // subtract from HL
-                            value = self.memory[self.registers.get_hl() as usize] as u16;
+                            value = self.read_memory(self.registers.get_hl()) as u16;
                             op_cycles = 8;
                         } else {
                             // subtract from register
@@ -693,7 +737,7 @@ impl CPU {
                         self.registers.f = 0;
                         if opcode == 0xAE {
                             // XOR HL
-                            self.registers.a = self.registers.a ^ self.memory[self.registers.get_hl() as usize];
+                            self.registers.a = self.registers.a ^ self.read_memory(self.registers.get_hl());
                             op_cycles = 8;
                         }else {
                             //XOR REGİSTER
@@ -704,7 +748,7 @@ impl CPU {
                         self.registers.f = 0b00100000;
                         if opcode == 0xA6 {
                             // AND HL
-                            self.registers.a = self.memory[self.registers.get_hl() as usize] & self.registers.a;
+                            self.registers.a = self.read_memory(self.registers.get_hl()) & self.registers.a;
                             op_cycles = 8;
                         }else {
                             // AND REGİSTER
@@ -732,7 +776,7 @@ impl CPU {
                         // Get the value. Register or [HL] in memory.
                         if opcode == 0xBE {
                             // CP HL
-                            value = self.memory[self.registers.get_hl() as usize];
+                            value = self.read_memory(self.registers.get_hl());
                             op_cycles = 8;
 
                         }else {
@@ -759,7 +803,7 @@ impl CPU {
                         self.registers.f = 0;
                         if opcode == 0xB6 {
                             // OR HL
-                            self.registers.a |= self.memory[self.registers.get_hl() as usize];
+                            self.registers.a |= self.read_memory(self.registers.get_hl());
                             op_cycles = 8;
                         }else {    
                             // Or Reg
@@ -786,7 +830,7 @@ impl CPU {
 
                 // -----ADD SP with 8 bit immediate value-----
                 0xE8 => {
-                    let value = self.memory[(self.registers.pc + 1) as usize];
+                    let value = self.read_memory(self.registers.pc + 1);
                     self.registers.f = self.registers.f & 0b10000000;
                     let sum = self.registers.sp as i16 + value as i16;
                     if sum > 0xFF {
@@ -921,48 +965,48 @@ impl CPU {
 
                 // ------------------ LDH [a8], A ------------------
                 0xE0 => {
-                    let address = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    self.memory[0xFF00 + address as usize] = self.registers.a;
+                    let address = self.read_memory(self.registers.pc + 1) as u16;
+                    self.write_memory(0xFF00 + address, self.registers.a);
                     12
                 },
                 // ------------------ LDH A, [a8] ------------------
                 0xF0 => {
-                    let address = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    self.registers.a = self.memory[0xFF00 + address as usize];
+                    let address = self.read_memory(self.registers.pc + 1) as u16;
+                    self.registers.a = self.read_memory(0xFF00 + address);
                     12
                 },
 
                 // ------------------ LD [C], A ------------------
                 0xE2 => {
-                    self.memory[0xFF00 + self.registers.c as usize] = self.registers.a;
+                    self.write_memory(0xFF00 + self.registers.c as u16, self.registers.a);
                     8
                 },
                 // ------------------ LD A, [C] ------------------
                 0xF2 => {
-                    self.registers.a = self.memory[0xFF00 + self.registers.c as usize];
+                    self.registers.a = self.read_memory(0xFF00 + self.registers.c as u16);
                     8
                 },
                 // ------------------ LD [a16], A ------------------
                 0xEA => {
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     let address = msb << 8 | lsb;
-                    self.memory[address as usize] = self.registers.a;
+                    self.write_memory(address, self.registers.a);
                     16
                 },
                 // ------------------ LD A, [a16] ------------------
                 0xFA => {
-                    let lsb = self.memory[(self.registers.pc + 1) as usize] as u16;
-                    let msb = self.memory[(self.registers.pc + 2) as usize] as u16;
+                    let lsb = self.read_memory(self.registers.pc + 1) as u16;
+                    let msb = self.read_memory(self.registers.pc + 2) as u16;
                     let address = msb << 8 | lsb;
-                    self.registers.a = self.memory[address as usize];
+                    self.registers.a = self.read_memory(address);
                     16
                 },
 
                 // ------------------ LD HL, SP+r8 ------------------
                 0xF8 => {
                     let mut flag = 0;
-                    let value = self.memory[(self.registers.pc + 1) as usize] as u8;
+                    let value = self.read_memory(self.registers.pc + 1);
                     self.registers.f = self.registers.f & 0b10000000;
                     let sum = self.registers.sp as i16 + value as i16;
                     if sum > 0xFF {
@@ -985,56 +1029,56 @@ impl CPU {
                 // ------------------ PUSH -----------------
                 0xC5 => {
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.c;
+                    self.write_memory(self.registers.sp as u16, self.registers.c);
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.b;
+                    self.write_memory(self.registers.sp as u16, self.registers.b);
                     16
                 },
                 0xD5 => {
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.e;
+                    self.write_memory(self.registers.sp as u16, self.registers.e);
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.d;
+                    self.write_memory(self.registers.sp as u16, self.registers.d);
                     16
                 },
                 0xE5 => {
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.l;
+                    self.write_memory(self.registers.sp as u16, self.registers.l);
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.h;
+                    self.write_memory(self.registers.sp as u16, self.registers.h);
                     16
                 },
                 0xF5 => {
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.f;
+                    self.write_memory(self.registers.sp as u16, self.registers.f);
                     self.registers.sp -= 1;
-                    self.memory[self.registers.sp as usize] = self.registers.a;
+                    self.write_memory(self.registers.sp as u16, self.registers.a);
                     16
                 },
 
 
                 // ------------------ POP ------------------
                 0xC1 => {
-                    self.registers.b = self.memory[self.registers.sp as usize];
-                    self.registers.c = self.memory[self.registers.sp as usize + 1];
+                    self.registers.b = self.read_memory(self.registers.sp);
+                    self.registers.c = self.read_memory(self.registers.sp + 1);
                     self.registers.sp += 2;
                     12
                 },
                 0xD1 => {
-                    self.registers.d = self.memory[self.registers.sp as usize];
-                    self.registers.e = self.memory[self.registers.sp as usize + 1];
+                    self.registers.d = self.read_memory(self.registers.sp);
+                    self.registers.e = self.read_memory(self.registers.sp + 1);
                     self.registers.sp += 2;
                     12
                 },
                 0xE1 => {
-                    self.registers.h = self.memory[self.registers.sp as usize];
-                    self.registers.l = self.memory[self.registers.sp as usize + 1];
+                    self.registers.h = self.read_memory(self.registers.sp);
+                    self.registers.l = self.read_memory(self.registers.sp + 1);
                     self.registers.sp += 2;
                     12
                 },
                 0xF1 => {
-                    self.registers.a = self.memory[self.registers.sp as usize];
-                    self.registers.f = self.memory[self.registers.sp as usize + 1];
+                    self.registers.a = self.read_memory(self.registers.sp);
+                    self.registers.f = self.read_memory(self.registers.sp + 1);
                     self.registers.sp += 2;
                     12
                 },
@@ -1054,7 +1098,7 @@ impl CPU {
 
                 // ------------------ PREFIX CB ------------------
                 0xCB => {
-                    let cb_opcode = self.memory[(self.registers.pc + 1) as usize];
+                    let cb_opcode = self.read_memory(self.registers.pc + 1);
                     let cycles_cb = self.run_cb_prefix(cb_opcode);
 
                     4 + cycles_cb
@@ -1067,8 +1111,8 @@ impl CPU {
             _ => 0
 
         };
-        //println!("opcode: {:x}, cycles: {}", opcode, cycles);
-
+        println!("opcode: {:x}, cycles: {}", opcode, cycles);
+        self.registers.pc += cycles as u16;
     }
 
 
@@ -1089,11 +1133,11 @@ impl CPU {
                         //------------------ RLC ------------------
                         if cb_opcode & 0x0F == 0x06 {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value >> 7 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value << 1 | value >> 7;
+                            self.write_memory(self.registers.get_hl(), value << 1 | value >> 7);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1110,11 +1154,11 @@ impl CPU {
                         //------------------ RRC ------------------
                         if cb_opcode & 0x0F == 0x0E {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value & 1 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value >> 1 | value << 7;
+                            self.write_memory(self.registers.get_hl(), value >> 1 | value << 7);
                             cycles_cb = 16; 
                         }else {
                             // Register
@@ -1143,11 +1187,11 @@ impl CPU {
                         //------------------ RL ------------------
                         if cb_opcode & 0x0F == 0x06 {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value >> 7 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value << 1 | (old_flag >> 4) & 1;
+                            self.write_memory(self.registers.get_hl(), value << 1 | (old_flag >> 4) & 1);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1162,11 +1206,11 @@ impl CPU {
                         //------------------ RR ------------------
                         if cb_opcode & 0x0F == 0x0E {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value & 1 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value >> 1 | ((old_flag >> 4) & 1) << 7;
+                            self.write_memory(self.registers.get_hl(), value >> 1 | ((old_flag >> 4) & 1) << 7);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1193,11 +1237,11 @@ impl CPU {
                         // -----------------------------------------
                         if cb_opcode & 0x0F == 0x06 {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value >> 7 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value << 1 ;
+                            self.write_memory(self.registers.get_hl(), value << 1);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1215,11 +1259,11 @@ impl CPU {
                         // -----------------------------------------
                         if cb_opcode & 0x0F == 0x0E {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value & 1 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value >> 1 | value & 0b10000000;
+                            self.write_memory(self.registers.get_hl(), value >> 1 | value & 0b10000000);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1245,9 +1289,9 @@ impl CPU {
                         let cycles_cb;
                         if cb_opcode & 0x0F == 0x06 {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
-                            self.memory[self.registers.get_hl() as usize] = (value & 0x0F) << 4 | (value & 0xF0) >> 4;
-                            if self.memory[self.registers.get_hl() as usize] == 0 {
+                            let value = self.read_memory(self.registers.get_hl());
+                            self.write_memory(self.registers.get_hl(), (value & 0x0F) << 4 | (value & 0xF0) >> 4);
+                            if self.read_memory(self.registers.get_hl()) == 0 {
                                 flag |= 0b10000000;
                             }
                             cycles_cb = 16;
@@ -1271,11 +1315,11 @@ impl CPU {
                         let cycles_cb;
                         if cb_opcode & 0x0F == 0x0E {
                             // address HL
-                            let value = self.memory[self.registers.get_hl() as usize];
+                            let value = self.read_memory(self.registers.get_hl());
                             if value & 1 == 1 {
                                 flag |= 0b00010000;
                             }
-                            self.memory[self.registers.get_hl() as usize] = value >> 1;
+                            self.write_memory(self.registers.get_hl(), value >> 1);
                             cycles_cb = 16;
                         }else {
                             // Register
@@ -1308,7 +1352,7 @@ impl CPU {
                     if cb_opcode & 0x0F == 0b110 {
                         // address HL
                         cycles = 16;
-                        self.memory[self.registers.get_hl() as usize]
+                        self.read_memory(self.registers.get_hl())
                     }else {
                         // Register
                         cycles = 8;
@@ -1332,7 +1376,8 @@ impl CPU {
                 if cb_opcode & 0x0F == 0b110 {
                     // address HL
                     cycles = 16;
-                    self.memory[self.registers.get_hl() as usize] &= !(0b10000000 >> bit_to_reset);
+                    let value = self.read_memory(self.registers.get_hl()) & !(0b10000000 >> bit_to_reset);
+                    self.write_memory(self.registers.get_hl(), value);
                 }else {
                     // Register
                     cycles = 8;
@@ -1352,7 +1397,8 @@ impl CPU {
                 if cb_opcode & 0x0F == 0b110 {
                     // address HL
                     cycles = 16;
-                    self.memory[self.registers.get_hl() as usize] |= 0b10000000 >> bit_to_set;
+                    let value = self.read_memory(self.registers.get_hl()) | 0b10000000 >> bit_to_set;
+                    self.write_memory(self.registers.get_hl(), value);
                 }else {
                     // Register
                     cycles = 8;
