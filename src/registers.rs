@@ -1,6 +1,6 @@
 
 
-
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Register {
     pub a: u8,
     pub f: u8, // The F register is indirectly accessible by the programer.

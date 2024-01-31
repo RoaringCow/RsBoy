@@ -3,7 +3,7 @@ use minifb::Key;
 mod cpu;
 mod registers;
 mod display;
-mod gpu;
+mod ppu;
 mod cartridge;
 
 use std::fs::File;
@@ -37,7 +37,8 @@ fn main() {
         }
         y = !y;
         
-        
+        cpu.run_instruction(cpu.fetch_instruction());
+        println!("Registers: {:?}", cpu.registers);
         display.update();
     }
     

@@ -1,5 +1,5 @@
 use crate::registers::Register;
-use crate::gpu::GPU;
+use crate::ppu::PPU;
 use crate::cartridge::Cartridge;
 #[allow(dead_code)]
 
@@ -11,7 +11,7 @@ pub struct CPU {
     pub memory: [u8; 0x2000],
     halted: bool,
     ei: bool,
-    gpu: GPU,
+    ppu: PPU,
     rom: Cartridge,
 }
 impl CPU {
@@ -30,10 +30,10 @@ impl CPU {
                 h: 0x0,
                 l: 0x0,
                 sp: 0xFFFE, // not sure about this
-                pc: 0xC000, //only to test
+                pc: 0x0000, //only to test
             },
             memory: [0; 0x2000],
-            gpu: GPU::new(),
+            ppu: PPU::new(),
             halted: false,
             ei: false,
             rom: Cartridge::new(game_rom),
@@ -57,7 +57,7 @@ impl CPU {
     }
 
     #[allow(dead_code)]
-    fn fetch_instruction(&self) -> u8{
+    pub fn fetch_instruction(&self) -> u8{
         self.read_memory(self.registers.pc)
     }
 
@@ -102,10 +102,9 @@ impl CPU {
     }
 
     pub fn read_memory(&self, address: u16) -> u8 {
-        println!("reading memory at address: {:X}", address);
         match address {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
-            0x8000..=0x9FFF => self.gpu.read_vram(address), // VRAM
+            0x8000..=0x9FFF => self.ppu.read_vram(address), // VRAM
             0xA000..=0xBFFF => 0, // External RAM
             0xC000..=0xCFFF => self.memory[address as usize - 0xC000], // RAM
             0xE000..=0xFDFF => self.memory[address as usize - 0xE000], // Echo RAM
@@ -122,7 +121,7 @@ impl CPU {
         println!("reading memory at address: {:X}", address);
         match address {
             0x0000..=0x7FFF => self.rom.switch_bank(value), // ROM
-            0x8000..=0x9FFF => self.gpu.write_vram(address, value), // VRAM
+            0x8000..=0x9FFF => self.ppu.write_vram(address, value), // VRAM
             0xA000..=0xBFFF => todo!(), // External RAM
             0xC000..=0xCFFF => self.memory[address as usize - 0xC000] = value, // RAM
             0xE000..=0xFDFF => self.memory[address as usize - 0xE000] = value, // Echo RAM
@@ -143,15 +142,16 @@ impl CPU {
         // overall performance. I will certainly do it if the performance is
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
-        
+
+        println!("instruction: {}", opcode);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
 
 
-// --------------------------------------------------------------------
-//                          0x00 --- 0x3F
-// --------------------------------------------------------------------
+            // --------------------------------------------------------------------
+            //                          0x00 --- 0x3F
+            // --------------------------------------------------------------------
             0b00 => match opcode {
                 0x00 => 4,
                 0x10 => todo!(),
@@ -830,6 +830,132 @@ impl CPU {
             // --------------------------------------------------------------------
             0b11 => match opcode {
 
+                // -------------------------------------------------------
+                // arithmetic operations with A with 8 bit immediate value
+                // -------------------------------------------------------
+                // i would have made a function for this if i knew these would
+                // take up so much space
+                // ------------------ ADD A, d8 ------------------
+                0xC6 => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    let mut flag = 0;
+                    let sum = self.registers.a as u16 + value as u16;
+                    if sum > 0xFF {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.a & 0x0F > 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    if sum == 0 {
+                        flag |= 0b10000000;
+                    }
+                    self.registers.a = sum as u8;
+                    self.registers.f = flag;
+                    8
+                },
+                // ------------------ ADC A, d8 ------------------
+                0xCE => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    let mut flag = 0;
+                    let sum = self.registers.a as u16 + value as u16 + ((self.registers.f >> 4) & 1) as u16;
+                    if sum > 0xFF {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F + self.registers.a & 0x0F + (self.registers.f >> 4) & 1 > 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    if sum == 0 {
+                        flag |= 0b10000000;
+                    }
+                    self.registers.a = sum as u8;
+                    self.registers.f = flag;
+                    8
+                },
+                // ------------------ SUB A, d8 ------------------
+                0xD6 => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    let mut flag = 0b01000000;
+                    if value > self.registers.a {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F > self.registers.a & 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    if value == self.registers.a {
+                        flag |= 0b10000000;
+                    }
+                    self.registers.a -= value;
+                    self.registers.f = flag;
+                    8
+                },
+                // ------------------ SBC A, d8 ------------------
+                0xDE => {
+                    let value = self.read_memory(self.registers.pc + 1) + (self.registers.f >> 4) & 1;
+                    let mut flag = 0b01000000;
+                    if value > self.registers.a {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F > self.registers.a & 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    if value == self.registers.a {
+                        flag |= 0b10000000;
+                    }
+                    self.registers.a -= value;
+                    self.registers.f = flag;
+                    8
+
+                },
+                // ------------------ AND A, d8 ------------------
+                0xE6 => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    self.registers.a &= value;
+                    self.registers.f = 0b00100000;
+                    if self.registers.a == 0 {
+                        self.registers.f |= 0b10000000;
+                    }
+                    8
+                },
+                // ------------------ XOR A, d8 ------------------
+                0xEE => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    self.registers.a ^= value;
+                    self.registers.f = 0;
+                    if self.registers.a == 0 {
+                        self.registers.f = 0b10000000;
+                    }
+                    8
+                },
+                // ------------------ OR A, d8 ------------------
+                0xF6 => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    self.registers.a |= value;
+                    self.registers.f = 0;
+                    if self.registers.a == 0 {
+                        self.registers.f = 0b10000000;
+                    }
+                    8
+                },
+                // ------------------ CP A, d8 ------------------
+                0xFE => {
+                    let value = self.read_memory(self.registers.pc + 1);
+                    let mut flag = 0b01000000;
+                    if value > self.registers.a {
+                        flag |= 0b00010000;
+                    }
+                    if value & 0x0F > self.registers.a & 0x0F {
+                        flag |= 0b00100000;
+                    }
+                    if value == self.registers.a {
+                        flag |= 0b10000000;
+                    }
+                    self.registers.f = flag;
+                    8
+                },
+
+
+                // ------------------ RST ------------------
+
                 // -----ADD SP with 8 bit immediate value-----
                 0xE8 => {
                     let value = self.read_memory(self.registers.pc + 1);
@@ -1106,11 +1232,11 @@ impl CPU {
                     4 + cycles_cb
                 },
 
-                _ => 0
+                _ => 4
             },
 
 
-            _ => 0
+            _ => 4
 
         };
         println!("opcode: {:x}, cycles: {}", opcode, cycles);
@@ -1120,7 +1246,7 @@ impl CPU {
 
     fn run_cb_prefix(&mut self, cb_opcode: u8) -> u8 {
 
-       
+
         let cycles_cb = match cb_opcode >> 6 {
 
             0b00 => match cb_opcode & 0xF0 {
@@ -1337,7 +1463,7 @@ impl CPU {
                     }
                 },
 
-                _=> 0
+                _=> 4
             },
 
 
@@ -1410,7 +1536,7 @@ impl CPU {
             },
 
 
-            _=> 0
+            _=> 4
         };
         cycles_cb
     }
