@@ -23,7 +23,7 @@ impl Display {
             panic!("{}", e);
         });
 
-        window.limit_update_rate(Some(std::time::Duration::from_millis(1000/60)));
+        window.limit_update_rate(Some(std::time::Duration::from_millis(1000/5)));
 
         Self {
             buffer: vec![0; HEIGHT * WIDTH], // Initialize buffer as needed
