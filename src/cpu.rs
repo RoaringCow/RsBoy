@@ -28,7 +28,7 @@ impl CPU {
                 h: 0x0,
                 l: 0x0,
                 sp: 0xFFFE, // not sure about this
-                pc: 0x0068, //only to test
+                pc: 0x0000, //only to test
             },
             memory: Memory::new(game_rom),
             halted: false,
@@ -114,7 +114,6 @@ impl CPU {
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
 
-        println!("instruction: {:x}", opcode);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually

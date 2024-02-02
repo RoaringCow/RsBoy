@@ -19,6 +19,7 @@ fn main() {
     display.update();
     let mut y = false;
     while display.window.is_open() && !display.window.is_key_down(Key::Escape) {
+        
         let mut x;
         if y {
             x = 10;
@@ -39,7 +40,7 @@ fn main() {
         y = !y;
         
         cpu.run_instruction(cpu.fetch_instruction());
-        println!("Registers: {:?}", cpu.registers);
+        println!("Registers a: {:X}, b:{:X}, c:{:X}, d:{:X}, e:{:X}, f:{:X}, h:{:X}, l:{:X}, ppc:{:X} sp:{:X}", cpu.registers.a, cpu.registers.b, cpu.registers.c, cpu.registers.d, cpu.registers.e, cpu.registers.f, cpu.registers.h, cpu.registers.l,  cpu.registers.pc, cpu.registers.sp);
         display.update();
     }
     
