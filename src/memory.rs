@@ -35,14 +35,15 @@ impl Memory {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.vram[address as usize - 0x8000], // VRAM
             0xA000..=0xBFFF => self.eram[address as usize - 0xA000], // External RAM
-            0xC000..=0xCFFF => self.wram[address as usize - 0xC000], // RAM
+            0xC000..=0xDFFF => self.wram[address as usize - 0xC000], // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000], // Echo RAM
             0xFE00..=0xFE9F => self.oam[address as usize - 0xFE00],//self.gpu.read_oam(address), // OAM
             0xFEA0..=0xFEFF => 0,// not usable
             0xFF00..=0xFF7F => self.io[address as usize - 0xFF00],// IO
             0xFF80..=0xFFFE => self.hram[address as usize - 0xFF80], // High RAM
             0xFFFF => self.ie, // Interrupt Enable Register
-            _ => panic!("address out of range"),
+            #[allow(unreachable_patterns)]
+            _ => panic!("address out of range"), // cant get here
 
 
             // özel bir ram dosyası oluştur
@@ -95,6 +96,15 @@ impl Cartridge {
         // Read all bytes from the file
         let mut file_bytes = Vec::new();
         file.read_to_end(&mut file_bytes)?;
+
+        if file_bytes.len() < 0x8000 {
+            // Calculate the number of zeros to fill
+            let zeros_to_fill = 0x8000 - file_bytes.len();
+
+            // Extend the vector with zeros
+            file_bytes.extend(std::iter::repeat(0).take(zeros_to_fill));
+            println!("file size: {}", file_bytes.len());
+        }
 
         Ok(file_bytes)
     }

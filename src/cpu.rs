@@ -114,6 +114,8 @@ impl CPU {
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
 
+        let mut is_jump: bool = false;
+        println!("{:x}", opcode);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
@@ -130,12 +132,14 @@ impl CPU {
                 //Jumps with offset 8bit
                 0x18 => {
                     self.jump_8bitoffset();
+                    is_jump = true;
                     12
                 },
                 0x20 => {
                     // if Zero flag reset
                     if self.registers.f >> 7 == 0 {
                         self.jump_8bitoffset();
+                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -144,6 +148,7 @@ impl CPU {
                     // if zero flag set
                     if self.registers.f >> 7 == 1 {
                         self.jump_8bitoffset();
+                        is_jump = true;
                         12
                     }else { 8 }
                 },
@@ -151,6 +156,7 @@ impl CPU {
                     // if carry flag reset
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_8bitoffset();
+                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -159,6 +165,7 @@ impl CPU {
                     // if carry flag set
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_8bitoffset();
+                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -207,6 +214,51 @@ impl CPU {
                     self.inc_flag_check(value + 1);
                     12
                 },
+                // DEC r8
+                0x05 => {
+                    self.registers.b -= 1;
+                    println!("b register: {:x}", self.registers.b);
+                    self.inc_flag_check(self.registers.b);
+                    4
+                },
+                0x0D => {
+                    self.registers.c -= 1;
+                    self.inc_flag_check(self.registers.c);
+                    4
+                },
+                0x15 => {
+                    self.registers.d -= 1;
+                    self.inc_flag_check(self.registers.d);
+                    4
+                },
+                0x1D => {
+                    self.registers.e -= 1;
+                    self.inc_flag_check(self.registers.e);
+                    4
+                },
+                0x25 => {
+                    self.registers.h -= 1;
+                    self.inc_flag_check(self.registers.h);
+                    4
+                },
+                0x2D => {
+                    self.registers.l -= 1;
+                    self.inc_flag_check(self.registers.l);
+                    4
+                },
+                0x3D => {
+                    self.registers.a -= 1;
+                    self.inc_flag_check(self.registers.a);
+                    4
+                },
+                0x35 => {
+                    let value = self.memory.read_memory(self.registers.get_hl());
+                    self.memory.write_memory(self.registers.get_hl(), value - 1);
+                    self.inc_flag_check(value - 1);
+                    12
+                },
+
+
 
                 // ------------------ ALU 16bit ------------------ 
                 // INC
@@ -809,36 +861,44 @@ impl CPU {
                 // ------------------ RST ------------------
                 0xC7 => {
                     self.rst_call(0x00); 
+                    is_jump = true;
                     16
                 },
                 0xCF => {
                     self.rst_call(0x08); 
+                    is_jump = true;
                     16
                 },
                 0xD7 => {
                     self.rst_call(0x10); 
+                    is_jump = true;
                     16
                 },
                 0xDF => {
                     self.rst_call(0x18); 
+                    is_jump = true;
                     16
                 },
-                    
+
                 0xE7 => {
                     self.rst_call(0x20); 
+                    is_jump = true;
                     16
                 },
                 0xEF => {
                     self.rst_call(0x28); 
+                    is_jump = true;
                     16
                 },
-                    
+
                 0xF7 => {
                     self.rst_call(0x30); 
+                    is_jump = true;
                     16
                 },
                 0xFF => {
                     self.rst_call(0x38); 
+                    is_jump = true;
                     16
                 },
 
@@ -987,6 +1047,7 @@ impl CPU {
                     // if zero flag reset
                     if self.registers.f >> 7 == 0 {
                         self.jump_16bitaddress();
+                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -995,6 +1056,7 @@ impl CPU {
                     // if zero flag set 
                     if self.registers.f >> 7 == 1 {
                         self.jump_16bitaddress();
+                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -1002,6 +1064,7 @@ impl CPU {
                 0xD2 => {
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_16bitaddress();
+                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -1009,18 +1072,21 @@ impl CPU {
                 0xDA => {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_16bitaddress();
+                        is_jump = true;
                         16
                     }else { 12 }
 
                 }
                 0xC3 => { // şişko kalp
                     self.jump_16bitaddress();
+                    is_jump = true;
                     16
                 },
 
                 // Jump to address in HL
                 0xE9 => {
                     self.registers.pc = self.registers.get_hl();
+                    is_jump = true;
                     4
                 },
 
@@ -1249,8 +1315,10 @@ impl CPU {
             _ => 4
 
         };
-        println!("opcode: {:x}, cycles: {}", opcode, cycles);
-        self.registers.pc += cycles as u16;
+        //println!("opcode: {:x}, cycles: {}", opcode, cycles);
+        if !is_jump {
+            self.registers.pc += cycles as u16;
+        }
     }
 
 
