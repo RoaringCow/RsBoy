@@ -17,7 +17,6 @@ const ADDRESS: &str = "/home/ersan/İndirilenler/tetris.gb";
 
 fn main() {
 
-    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/cpu_instrs/cpu_instrs.gb");
     let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     
     /*

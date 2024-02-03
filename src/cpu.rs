@@ -4,9 +4,7 @@ use crate::memory::Memory;
 use crate::gameboy_io::IO;
 #[allow(dead_code)]
 
-
-const OPCODE_SIZES: [u8; 256] = [
-
+/*
 /*0x*/ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
 /*1x*/ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
 /*2x*/ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
@@ -27,6 +25,32 @@ const OPCODE_SIZES: [u8; 256] = [
 /*Ex*/ 2, 1, 2, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1,
 /*Fx*/ 2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1,
 
+these are the true ones
+*/
+
+const OPCODE_SIZES: [u8; 256] = [
+
+/*0x*/ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
+/*1x*/ 2, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1,
+/*2x*/ 0, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1,
+/*3x*/ 0, 3, 1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 2, 1,
+
+/*4x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*5x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*6x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*7x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+/*8x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*9x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*Ax*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*Bx*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+/*Cx*/ 0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 0, 0, 2, 0,
+/*Dx*/ 0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+/*Ex*/ 2, 1, 2, 0, 0, 1, 2, 0, 2, 0, 3, 0, 0, 0, 2, 0,
+/*Fx*/ 2, 1, 2, 1, 0, 1, 2, 0, 2, 1, 3, 1, 0, 0, 2, 0,
+
+// modified some (Jumps and calls) because of the implementation i made
 ];
 
 pub struct CPU {
@@ -109,11 +133,10 @@ impl CPU {
     }
 
     fn return_instruction(&mut self) {
-        self.registers.sp += 1;
         let mut return_address: u16;
         return_address = self.memory.read_memory(self.registers.sp) as u16;
         self.registers.sp += 1;
-        return_address |= (self.memory.read_memory(self.registers.sp) as u16) << 8;
+        return_address = (return_address << 8) | (self.memory.read_memory(self.registers.sp) as u16);
         self.registers.sp += 1;
         self.registers.pc = return_address;
     }
