@@ -17,8 +17,11 @@ const ADDRESS: &str = "/home/ersan/İndirilenler/tetris.gb";
 
 fn main() {
 
-    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
+    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
+    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/cb_test.gb");
     
+
+
     /*
     let mut display = ppu::PPU::new();
 
@@ -53,8 +56,9 @@ fn main() {
     */
     loop {
         cpu.run_instruction(cpu.fetch_instruction());
-        println!("Registers a: {:X}, b:{:X}, c:{:X}, d:{:X}, e:{:X}, f:{:X}, h:{:X}, l:{:X}, sp:{:X} pc:{:X}", cpu.registers.a, cpu.registers.b, cpu.registers.c, cpu.registers.d, cpu.registers.e, cpu.registers.f, cpu.registers.h, cpu.registers.l,  cpu.registers.sp, cpu.registers.pc);
+        println!("Registers a: {:b}, b:{:X}, c:{:X}, d:{:X}, e:{:X}, f:{:b}, h:{:X}, l:{:X}, sp:{:X} pc:{:X}", cpu.registers.a, cpu.registers.b, cpu.registers.c, cpu.registers.d, cpu.registers.e, cpu.registers.f, cpu.registers.h, cpu.registers.l,  cpu.registers.sp, cpu.registers.pc);
         thread::sleep(time::Duration::from_millis(100));
+        
     }
     
 

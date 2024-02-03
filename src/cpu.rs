@@ -45,7 +45,7 @@ const OPCODE_SIZES: [u8; 256] = [
 /*Ax*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 /*Bx*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 
-/*Cx*/ 0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 0, 0, 2, 0,
+/*Cx*/ 0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 2, 0,
 /*Dx*/ 0, 1, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0,
 /*Ex*/ 2, 1, 2, 0, 0, 1, 2, 0, 2, 0, 3, 0, 0, 0, 2, 0,
 /*Fx*/ 2, 1, 2, 1, 0, 1, 2, 0, 2, 1, 3, 1, 0, 0, 2, 0,
@@ -256,7 +256,6 @@ impl CPU {
                 // DEC r8
                 0x05 => {
                     self.registers.b -= 1;
-                    println!("b register: {:x}", self.registers.b);
                     self.inc_flag_check(self.registers.b);
                     4
                 },
@@ -658,7 +657,6 @@ impl CPU {
                     let first = (opcode & 0b00111000) >> 3;
                     if opcode & 0xF == 0x6 || opcode & 0xF == 0xE {
                         //Load register from HL
-                        println!("load register from HL");
                         *self.decode_register(first) = self.memory.read_memory(self.registers.get_hl()); 
                         8
                     }else {
@@ -1340,8 +1338,9 @@ impl CPU {
             _ => 4
 
         };
-        println!("opcode: {:x}, cycles: {}", opcode, cycles);
+        println!("opcode: \x1b[38;2;255;0;255m{:x}\x1b[0m, cycles: {}", opcode, cycles);
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
+
     }
 
 
