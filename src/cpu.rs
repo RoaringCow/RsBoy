@@ -5,6 +5,29 @@ use crate::gameboy_io::IO;
 #[allow(dead_code)]
 
 
+const OPCODE_SIZES: [u8; 256] = [
+
+/*0x*/ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
+/*1x*/ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+/*2x*/ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+/*3x*/ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+
+/*4x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*5x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*6x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*7x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+/*8x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*9x*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*Ax*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/*Bx*/ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+
+/*Cx*/ 1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 1, 3, 3, 2, 1,
+/*Dx*/ 1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1,
+/*Ex*/ 2, 1, 2, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1,
+/*Fx*/ 2, 1, 2, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1,
+
+];
 
 pub struct CPU {
     pub registers: Register,
@@ -114,8 +137,6 @@ impl CPU {
         // shit but if it isn't i won't bother. I dont know if hashmap would
         // be faster.
 
-        let mut is_jump: bool = false;
-        println!("{:x}", opcode);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
@@ -132,14 +153,12 @@ impl CPU {
                 //Jumps with offset 8bit
                 0x18 => {
                     self.jump_8bitoffset();
-                    is_jump = true;
                     12
                 },
                 0x20 => {
                     // if Zero flag reset
                     if self.registers.f >> 7 == 0 {
                         self.jump_8bitoffset();
-                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -148,7 +167,6 @@ impl CPU {
                     // if zero flag set
                     if self.registers.f >> 7 == 1 {
                         self.jump_8bitoffset();
-                        is_jump = true;
                         12
                     }else { 8 }
                 },
@@ -156,7 +174,6 @@ impl CPU {
                     // if carry flag reset
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_8bitoffset();
-                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -165,7 +182,6 @@ impl CPU {
                     // if carry flag set
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_8bitoffset();
-                        is_jump = true;
                         12
                     }else { 8 }
 
@@ -861,44 +877,36 @@ impl CPU {
                 // ------------------ RST ------------------
                 0xC7 => {
                     self.rst_call(0x00); 
-                    is_jump = true;
                     16
                 },
                 0xCF => {
                     self.rst_call(0x08); 
-                    is_jump = true;
                     16
                 },
                 0xD7 => {
                     self.rst_call(0x10); 
-                    is_jump = true;
                     16
                 },
                 0xDF => {
                     self.rst_call(0x18); 
-                    is_jump = true;
                     16
                 },
 
                 0xE7 => {
                     self.rst_call(0x20); 
-                    is_jump = true;
                     16
                 },
                 0xEF => {
                     self.rst_call(0x28); 
-                    is_jump = true;
                     16
                 },
 
                 0xF7 => {
                     self.rst_call(0x30); 
-                    is_jump = true;
                     16
                 },
                 0xFF => {
                     self.rst_call(0x38); 
-                    is_jump = true;
                     16
                 },
 
@@ -1047,7 +1055,6 @@ impl CPU {
                     // if zero flag reset
                     if self.registers.f >> 7 == 0 {
                         self.jump_16bitaddress();
-                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -1056,7 +1063,6 @@ impl CPU {
                     // if zero flag set 
                     if self.registers.f >> 7 == 1 {
                         self.jump_16bitaddress();
-                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -1064,7 +1070,6 @@ impl CPU {
                 0xD2 => {
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_16bitaddress();
-                        is_jump = true;
                         16
                     }else { 12 }
 
@@ -1072,21 +1077,18 @@ impl CPU {
                 0xDA => {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_16bitaddress();
-                        is_jump = true;
                         16
                     }else { 12 }
 
                 }
                 0xC3 => { // şişko kalp
                     self.jump_16bitaddress();
-                    is_jump = true;
                     16
                 },
 
                 // Jump to address in HL
                 0xE9 => {
                     self.registers.pc = self.registers.get_hl();
-                    is_jump = true;
                     4
                 },
 
@@ -1315,10 +1317,8 @@ impl CPU {
             _ => 4
 
         };
-        //println!("opcode: {:x}, cycles: {}", opcode, cycles);
-        if !is_jump {
-            self.registers.pc += cycles as u16;
-        }
+        println!("opcode: {:x}, cycles: {}", opcode, cycles);
+        self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
     }
 
 
