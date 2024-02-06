@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use minifb::Key;
+use minifb::{Key, Window, WindowOptions};
 mod cpu;
 mod registers;
 mod ppu;
@@ -12,58 +12,40 @@ use std::io::{self, Read};
 
 use std::{thread, time};
 
+const WIDTH: usize = 640;
+const HEIGHT: usize = 360;
+
 #[allow(dead_code)]
-const ADDRESS: &str = "/home/ersan/İndirilenler/tetris.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/cb_test.gb");
-    
 
 
-    /*
-    let mut display = ppu::PPU::new();
+    let mut window = Window::new(
+        "Test - ESC to exit",
+        WIDTH,
+        HEIGHT,
+        WindowOptions::default(),
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
 
-    display.update();
-    let mut y = false;
-    while display.window.is_open() && !display.window.is_key_down(Key::Escape) {
-        
-        let mut x;
-        if y {
-            x = 10;
-        } else {
-            x = 5;
-        }
-        for i in display.buffer.iter_mut() {
-            if x > 5{
-                *i = 0x000000;
-            } else {
-                *i = 0x444444;
-            }
-            x -= 1;
-            if x <= 0 {
-                x = 10;
-            }
-        }
-        y = !y;
-        
+    window.limit_update_rate(Some(std::time::Duration::from_millis(1000/5)));
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
-        println!("Registers a: {:X}, b:{:X}, c:{:X}, d:{:X}, e:{:X}, f:{:X}, h:{:X}, l:{:X}, ppc:{:X} sp:{:X}", cpu.registers.a, cpu.registers.b, cpu.registers.c, cpu.registers.d, cpu.registers.e, cpu.registers.f, cpu.registers.h, cpu.registers.l,  cpu.registers.pc, cpu.registers.sp);
-        display.update();
-        thread::sleep(time::Duration::from_millis(1000));
-    }
-    */
-    loop {
-        cpu.run_instruction(cpu.fetch_instruction());
-        println!("Registers a: {:b}, b:{:X}, c:{:X}, d:{:X}, e:{:X}, f:{:b}, h:{:X}, l:{:X}, sp:{:X} pc:{:X}", cpu.registers.a, cpu.registers.b, cpu.registers.c, cpu.registers.d, cpu.registers.e, cpu.registers.f, cpu.registers.h, cpu.registers.l,  cpu.registers.sp, cpu.registers.pc);
+        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
         thread::sleep(time::Duration::from_millis(100));
-        
+
+
+
     }
-    
 
 
-    
 
 }
 
@@ -123,7 +105,7 @@ mod tests {
         cpu.run_instruction(0xB9);
         assert_eq!(cpu.registers.f >> 4, 0b0111);
     }
-    
+
     #[test]
     fn test_rrc() {
         let mut cpu = cpu::CPU::new(ADDRESS);

@@ -60,6 +60,14 @@ pub struct CPU {
     ei: bool,
 }
 impl CPU {
+    #[allow(dead_code)]
+    pub fn reset(&mut self) {
+        self.registers.reset();
+        self.memory.reset();
+        self.halted = false;
+        self.ei = false;
+        
+    }
 
     #[allow(dead_code)]
     pub fn new(game_rom: &str) -> CPU {

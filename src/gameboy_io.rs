@@ -1,8 +1,9 @@
 
-
+#[derive(Debug)]
 pub struct IO {
     io_registers: [u8; 0x7f],
 }
+#[allow(dead_code)]
 impl IO {
     pub fn new() -> IO {
         IO {

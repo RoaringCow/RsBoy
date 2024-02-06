@@ -45,4 +45,17 @@ impl Register {
         self.h = (input >> 8) as u8;
         self.l = (input & 0xFF) as u8;
     }
+
+    pub fn reset(&mut self) {
+        self.a = 0;
+        self.f = 0;
+        self.b = 0;
+        self.c = 0;
+        self.d = 0;
+        self.e = 0;
+        self.h = 0;
+        self.l = 0;
+        self.sp = 0xFFFE;
+        self.pc = 0;
+    }
 }
