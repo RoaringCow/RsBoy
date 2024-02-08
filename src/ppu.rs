@@ -5,6 +5,8 @@ const HEIGHT: usize = 360;
 
 pub struct PPU {
     pub buffer: [u32; WIDTH * HEIGHT], // Change type to array
+    pub vram: [u8; 0x2000], // Video RAM
+    pub oam: [u8; 0xA0], // Object Attribute Memory
     pub cycle: u8,
 
     // Status Registers
@@ -34,11 +36,23 @@ pub struct PPU {
 
     // FF45 - LYC - LY Compare (Read/Write)
     pub lyc: u8,
+    
+    // FF47 - BGP - BG Palette Data (R/W)
+    pub palette: u8,
+
+
+    // FF4A - WY - Window Y Position (R/W)
+    pub wy: u8,
+    // FF4B - WX - Window X Position minus 7 (R/W)
+    pub wx: u8,
+
 
 
    
 
 }
+
+
 
 #[allow(dead_code)]
 impl PPU {
@@ -51,12 +65,17 @@ impl PPU {
         self.scx = 0;
         self.ly = 0;
         self.lyc = 0;
+        self.palette = 0;
+        self.wy = 0;
+        self.wx = 0;
     }
 
     // Create a new display
     pub fn new() -> Self {
         Self {
             buffer: [0; WIDTH * HEIGHT],
+            vram: [0; 0x2000],
+            oam: [0; 0xA0],
             cycle: 0,
             lcdc: 0,
             stat: 0,
@@ -64,8 +83,47 @@ impl PPU {
             scx: 0,
             ly: 0, 
             lyc: 0,
+            palette: 0,
+            wy: 0,
+            wx: 0,
         }
     }
 
 
+
+}
+
+
+struct FIFO {
+   buffer: u32,
+   current_tile_address : u8,
+   
+}
+impl FIFO {
+    pub fn new() -> Self {
+        Self {
+            buffer: 0,
+            current_tile_address: 0,
+        }
+    }
+    pub fn fetch(&mut self, ppu: &PPU) -> u32 {
+        let address: u16;
+        if ppu.lcdc & 0b00001000 == 0 {
+            address = 0x9000 + self.current_tile_address as u16;
+        } else {
+            address = 0x8000 + self.current_tile_address as u16;
+        }
+        let value = ppu.buffer[address as usize];
+        value as u32
+    }
+
+    fn is_in_window(&self, ppu: &PPU) -> bool {
+        if ppu.lcdc & 0b00100000 == 0 {
+            return false;
+        }
+        if ppu.scx <= ppu.wx {
+            return false;
+        }
+        return true;
+    }
 }
