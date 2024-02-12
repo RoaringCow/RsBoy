@@ -20,6 +20,7 @@ const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
+    /*
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/cb_test.gb");
 
@@ -44,6 +45,15 @@ fn main() {
 
 
     }
+    */
+    let mut cpu = cpu::CPU::new(ADDRESS);
+    cpu.memory.write_memory(0x9C32, 0x01);
+    cpu.memory.ppu.state = ppu::Ppumode::VRAM;
+    cpu.memory.ppu.lcdc = 0b10001000;
+    cpu.memory.ppu.ly = 0x09;
+    for _ in 0..35 {
+        cpu.memory.ppu.tick();
+    }
 
 
 
@@ -59,6 +69,13 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+    #[test]
+    fn test_fetch_coordinate() {
+        let mut cpu = cpu::CPU::new(ADDRESS);
+        cpu.memory.write_memory(0x9C00, 0x01);
+        cpu.memory.ppu.lcdc = 0b10001000;
+        cpu.memory.ppu.tick();
+    }
     #[test]
     fn test_load() {
         let mut cpu = cpu::CPU::new(ADDRESS);
