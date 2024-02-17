@@ -57,13 +57,9 @@ pub struct PPU {
     pub state: Ppumode, 
     pub ticks: u8,
    
-    // these are the fifos.
-    // yep only u32's
-    // They do the job so why bother make another struct
-    pub background_fifo: u32,
-    pub pixel_fifo: u32,
-    
     pub fetcher_x: u8,
+
+    pub current_line : u8,
 
 }
 
@@ -85,9 +81,10 @@ impl PPU {
         self.wx = 0;
         self.state = Ppumode::OAM;
         self.ticks = 0;
-        self.background_fifo = 0;
-        self.pixel_fifo = 0;
         self.fetcher_x = 0;
+        self.current_line = 0;
+
+
     }
 
     // Create a new display
@@ -108,18 +105,11 @@ impl PPU {
             wx: 0,
             state: Ppumode::OAM,
             ticks: 0,
-            background_fifo: 0,
-            pixel_fifo: 0,
-
             fetcher_x: 0,
+            current_line: 0,
         }
     }
 
-    pub fn push_fifo(&mut self){
-        todo!();
-        self.buffer[self.ly as usize * WIDTH + self.scx as usize] = self.background_fifo >> 30;
-        self.background_fifo <<= 2;
-    }
 
     pub fn tick(&mut self) {
         match self.state {
@@ -144,24 +134,14 @@ impl PPU {
             
             }
             Ppumode::VRAM => {
+                // get tile
+                let tile_index = self.get_tile();
                 
-                // fetch tile no
-                // todo! window hanling
-                let mut address: u16 = if self.lcdc & 0x08 == 0 {
-                    0x9800
-                } else {
-                    0x9C00
-                };
-                let y_offset = 32 * (((self.ly as u16 + self.scy as u16) / 8) & 0xFF) as u16;
-                let x_offset = ((((self.scx as u16) / 8) + self.fetcher_x as u16) & 0xFF) as u16;
-                address += y_offset + x_offset;
-                println!("address: {:X}, y_offset: {:X}, x_offset: {:X}", address, y_offset, x_offset);
-                self.buffer[self.ly as usize * WIDTH + self.fetcher_x as usize] = self.background_fifo >> 30;
-                // fetch tile data(Low)
-                // fetch tile data(High)
-                // push to fifo
-                // Pixel Transfer
-                self.fetcher_x += 1;
+
+
+
+
+                
             }
             Ppumode::HBlank => {
                 // HBlank
@@ -171,6 +151,38 @@ impl PPU {
             }
         } 
     }
+
+    fn get_tile(&self) -> u8 {
+        // get tile index
+        let tile_base_address = match self.lcdc >> 3 & 1 == 0 {
+            true => 0x9800,
+            false => 0x9C00,
+        };
+        
+        // scx is scrolled to get it divided by 8 (tile size)
+
+        let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
+        let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
+
+        let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
+        self.vram[tile_address as usize - 0x8000]
+    }
+
+    fn get_tile_data(&self, tile_number: u8) -> u16 {
+        let mut tile_id = tile_number as u16;
+        let base_address = match self.lcdc >> 4 & 1 == 0 {
+            true => {
+                tile_id = tile_id.wrapping_add(128);
+                0x8800
+            },
+            false => 0x8000,
+        };
+        let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
+        let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
+        ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
+    }
+
+
 
 
 }
@@ -193,3 +205,5 @@ pub enum Ppumode {
 // bit 1 - OBJ (Sprite) Display Enable    (0=Off, 1=On)
 // bit 0 - BG Display (for CGB see below) (0=Off, 1=On)
 
+struct FIFO {
+}

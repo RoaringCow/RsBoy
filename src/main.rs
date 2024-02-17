@@ -46,16 +46,8 @@ fn main() {
 
     }
     */
-    let mut cpu = cpu::CPU::new(ADDRESS);
-    cpu.memory.write_memory(0x9C32, 0x01);
-    cpu.memory.ppu.state = ppu::Ppumode::VRAM;
-    cpu.memory.ppu.lcdc = 0b10001000;
-    cpu.memory.ppu.ly = 0x09;
-    for _ in 0..35 {
-        cpu.memory.ppu.tick();
-    }
 
-
+    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
 }
 
