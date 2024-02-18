@@ -1,6 +1,6 @@
 
-const WIDTH: usize = 640;
-const HEIGHT: usize = 360;
+const WIDTH: usize = 160;
+const HEIGHT: usize = 144;
 
 
 pub struct PPU {
@@ -63,7 +63,10 @@ pub struct PPU {
 
     pub current_line : u8,
 
-    pub background_fifo: u32,
+    pub background_fifo: Vec<u8>,
+
+    pub tile_number : u8,
+    pub tile_data: u16,
 }
 
 
@@ -109,10 +112,14 @@ impl PPU {
             state: Ppumode::VRAM,
             ticks: 0,
             fetcher_x: 0,
-            background_fifo: 0,
+            background_fifo: Vec::new(),
             fifo_x_coordinate: 0,
 
             current_line: 0,
+
+            tile_number: 0,
+            tile_data: 0,
+
         }
     }
 
@@ -140,12 +147,27 @@ impl PPU {
             
             }
             Ppumode::VRAM => {
-                // get tile
-                let tile_index = self.get_tile();
 
-                println!("Tile Index: {:X}", tile_index);
-                let tile_data = self.get_tile_data(tile_index);
-                println!("Tile Data: {:X}", tile_data);
+                match self.cycle % 8 {
+                    0 => {
+                        // read_tile
+                        self.tile_number = self.get_tile();
+                    }
+                    // Artificially simulating the cycles
+                    4 => {
+                        // read data 1
+                        self.tile_data = self.get_tile_data(self.tile_number);
+                    }
+                    _ => {}
+                }
+
+                // i dont know which should come first
+                
+                
+                self.push_to_fifo();
+
+
+
                 
 
 
@@ -194,12 +216,33 @@ impl PPU {
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
-
-    fn fifo_push(&mut self) {
-        let value = self.background_fifo >> 30;
-        self.buffer[WIDTH*self.current_line as usize + self.fifo_x_coordinate as usize] = value;
-        self.background_fifo <<= 2;
+    fn push_to_fifo(&mut self) {
+        if self.background_fifo.len() <= 8 {
+            let first_byte: u8 = (self.tile_data >> 8) as u8;
+            let second_byte: u8 = self.tile_data as u8;
+                
+            for i in 0..8 {
+                // split and get the representing color
+                // lsb becomes the msb for the pixel and msb becomes the lsb
+                let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1 ;
+                self.background_fifo.push(color as u8);
+            }
+            self.tile_data = 0;
+        }
     }
+    fn print_to_screen(&mut self) {
+        // print to screen
+        let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
+        match self.background_fifo.remove(0) {
+            0 => self.buffer[address] = 0x000000,
+            1 => self.buffer[address] = 0x555555,
+            2 => self.buffer[address] = 0xAAAAAA,
+            3 => self.buffer[address] = 0xFFFFFF,
+            _ => {}
+        }
+        self.fifo_x_coordinate += 1;
+    }
+
 
 }
 
@@ -220,15 +263,3 @@ pub enum Ppumode {
 // bit 2 - OBJ (Sprite) Size              (0=8x8, 1=8x16)
 // bit 1 - OBJ (Sprite) Display Enable    (0=Off, 1=On)
 // bit 0 - BG Display (for CGB see below) (0=Off, 1=On)
-struct FIFO {
-    data: u32,
-    size: u8,
-}
-impl FIFO {
-
-    pub fn fifo_push(&mut self, value: u32) -> u32{
-        self.data <<= 2;
-        self.data |= value;
-        0
-    }
-}
