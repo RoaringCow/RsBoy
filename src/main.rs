@@ -20,9 +20,9 @@ const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
-    /*
+    
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
-    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/cb_test.gb");
+    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
 
     let mut window = Window::new(
@@ -38,17 +38,21 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_millis(1000/5)));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        cpu.run_instruction(cpu.fetch_instruction());
+        //cpu.run_instruction(cpu.fetch_instruction());
         window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
         thread::sleep(time::Duration::from_millis(100));
 
 
 
     }
-    */
+    
 
+    /*
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
-
+    cpu.memory.write_memory(0x9000, 0x31);
+    cpu.memory.write_memory(0x9800, 0x00);   
+    cpu.memory.ppu.tick();
+    */
 }
 
 

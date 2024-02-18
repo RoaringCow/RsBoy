@@ -59,8 +59,11 @@ pub struct PPU {
    
     pub fetcher_x: u8,
 
+    pub fifo_x_coordinate: u8,
+
     pub current_line : u8,
 
+    pub background_fifo: u32,
 }
 
 
@@ -90,7 +93,7 @@ impl PPU {
     // Create a new display
     pub fn new() -> Self {
         Self {
-            buffer: [0; WIDTH * HEIGHT],
+            buffer: [0xFFFFFF; WIDTH * HEIGHT],
             vram: [0; 0x2000],
             oam: [0; 0xA0],
             cycle: 0,
@@ -103,9 +106,12 @@ impl PPU {
             palette: 0,
             wy: 0,
             wx: 0,
-            state: Ppumode::OAM,
+            state: Ppumode::VRAM,
             ticks: 0,
             fetcher_x: 0,
+            background_fifo: 0,
+            fifo_x_coordinate: 0,
+
             current_line: 0,
         }
     }
@@ -136,6 +142,10 @@ impl PPU {
             Ppumode::VRAM => {
                 // get tile
                 let tile_index = self.get_tile();
+
+                println!("Tile Index: {:X}", tile_index);
+                let tile_data = self.get_tile_data(tile_index);
+                println!("Tile Data: {:X}", tile_data);
                 
 
 
@@ -163,7 +173,7 @@ impl PPU {
 
         let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
         let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
-
+        println!("Tile X: {:X} Tile Y: {:X}", tile_x, tile_y);
         let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
         self.vram[tile_address as usize - 0x8000]
     }
@@ -177,13 +187,19 @@ impl PPU {
             },
             false => 0x8000,
         };
+        println!("Base Address: {:X}", base_address);
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
+        println!("Tile Address: {:X}", tile_address);
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
 
-
+    fn fifo_push(&mut self) {
+        let value = self.background_fifo >> 30;
+        self.buffer[WIDTH*self.current_line as usize + self.fifo_x_coordinate as usize] = value;
+        self.background_fifo <<= 2;
+    }
 
 }
 
@@ -204,6 +220,15 @@ pub enum Ppumode {
 // bit 2 - OBJ (Sprite) Size              (0=8x8, 1=8x16)
 // bit 1 - OBJ (Sprite) Display Enable    (0=Off, 1=On)
 // bit 0 - BG Display (for CGB see below) (0=Off, 1=On)
-
 struct FIFO {
+    data: u32,
+    size: u8,
+}
+impl FIFO {
+
+    pub fn fifo_push(&mut self, value: u32) -> u32{
+        self.data <<= 2;
+        self.data |= value;
+        0
+    }
 }
