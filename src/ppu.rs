@@ -1,3 +1,5 @@
+use minifb::Scale;
+
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
@@ -148,6 +150,10 @@ impl PPU {
             }
             Ppumode::VRAM => {
 
+                if self.fifo_x_coordinate >= 160 {
+                    self.fifo_x_coordinate = 0;
+                    self.state = Ppumode::HBlank;
+                }
                 match self.cycle % 8 {
                     0 => {
                         // read_tile
@@ -162,10 +168,10 @@ impl PPU {
                 }
 
                 // i dont know which should come first
-                
-                
+                self.print_to_screen();
+                self.print_to_screen();
                 self.push_to_fifo();
-
+                
 
 
                 
@@ -184,7 +190,7 @@ impl PPU {
         } 
     }
 
-    fn get_tile(&self) -> u8 {
+    fn get_tile(&mut self) -> u8 {
         // get tile index
         let tile_base_address = match self.lcdc >> 3 & 1 == 0 {
             true => 0x9800,
@@ -195,8 +201,9 @@ impl PPU {
 
         let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
         let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
-        println!("Tile X: {:X} Tile Y: {:X}", tile_x, tile_y);
         let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
+        println!("Tile X: {:X} Tile Y: {:X}  Tile addres: {:X}", tile_x, tile_y, tile_address);
+        self.fetcher_x += 1;
         self.vram[tile_address as usize - 0x8000]
     }
 
@@ -224,7 +231,8 @@ impl PPU {
             for i in 0..8 {
                 // split and get the representing color
                 // lsb becomes the msb for the pixel and msb becomes the lsb
-                let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1 ;
+                let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
+                println!("Color: {:b}", color);
                 self.background_fifo.push(color as u8);
             }
             self.tile_data = 0;
@@ -232,15 +240,22 @@ impl PPU {
     }
     fn print_to_screen(&mut self) {
         // print to screen
-        let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
-        match self.background_fifo.remove(0) {
-            0 => self.buffer[address] = 0x000000,
-            1 => self.buffer[address] = 0x555555,
-            2 => self.buffer[address] = 0xAAAAAA,
-            3 => self.buffer[address] = 0xFFFFFF,
-            _ => {}
+        if self.background_fifo.len() > 8 {
+            let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
+            let value = self.background_fifo.remove(0);
+            println!("Value: {:X}", value);
+            let color = match value {
+                0 => 0x000000,
+                1 => 0x555555,
+                2 => 0xAAAAAA,
+                3 => 0xFFFFFF,
+                _ => 0x000000,
+            };
+            println!("ADDRESS: {}  COLOR: {}", address, color);
+            self.buffer[address] = color;
+            self.fifo_x_coordinate += 1;
         }
-        self.fifo_x_coordinate += 1;
+        
     }
 
 
@@ -253,13 +268,3 @@ pub enum Ppumode {
     VRAM,
 }
 
-
-// FF40 - LCDC - LCD Control (R/W)
-// bit 7 - LCD Display Enable             (0=Off, 1=On)
-// bit 6 - Window Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
-// bit 5 - Window Display Enable          (0=Off, 1=On)
-// bit 4 - BG & Window Tile Data Select   (0=8800-97FF, 1=8000-8FFF)
-// bit 3 - BG Tile Map Display Select     (0=9800-9BFF, 1=9C00-9FFF)
-// bit 2 - OBJ (Sprite) Size              (0=8x8, 1=8x16)
-// bit 1 - OBJ (Sprite) Display Enable    (0=Off, 1=On)
-// bit 0 - BG Display (for CGB see below) (0=Off, 1=On)
