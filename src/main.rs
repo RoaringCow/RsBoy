@@ -14,7 +14,7 @@ use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 2;
+const SCALE: usize = 5;
 
 #[allow(dead_code)]
 const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
@@ -23,7 +23,7 @@ fn main() {
 
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
-    cpu.memory.write_memory(0x9000, 0x03);
+    cpu.memory.write_memory(0x9001, 0xFF);
     for x in 0x9800..0x9C00 {
         cpu.memory.write_memory(x, 0x00);
     }

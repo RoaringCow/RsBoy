@@ -166,9 +166,8 @@ impl PPU {
                     }
                     _ => {}
                 }
-
-                // i dont know which should come first
-                self.print_to_screen();
+                println!("background fifo: {:?}", self.background_fifo);
+                println!("Cycle: {}", self.cycle);
                 self.print_to_screen();
                 self.push_to_fifo();
                 
@@ -187,7 +186,9 @@ impl PPU {
             Ppumode::VBlank => {
                 // VBlank
             }
-        } 
+        }
+
+        self.cycle += 1;
     }
 
     fn get_tile(&mut self) -> u8 {
@@ -202,7 +203,6 @@ impl PPU {
         let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
         let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
         let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
-        println!("Tile X: {:X} Tile Y: {:X}  Tile addres: {:X}", tile_x, tile_y, tile_address);
         self.fetcher_x += 1;
         self.vram[tile_address as usize - 0x8000]
     }
@@ -216,10 +216,10 @@ impl PPU {
             },
             false => 0x8000,
         };
-        println!("Base Address: {:X}", base_address);
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
-        println!("Tile Address: {:X}", tile_address);
+        println!("tile number: {:X}", tile_number);
+        println!("\x1b[38;2;200;100;0m Address to get tile data: \x1b[0m: {:X}", tile_address);
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
@@ -232,7 +232,7 @@ impl PPU {
                 // split and get the representing color
                 // lsb becomes the msb for the pixel and msb becomes the lsb
                 let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
-                println!("Color: {:b}", color);
+                println!("Color: {}", color);
                 self.background_fifo.push(color as u8);
             }
             self.tile_data = 0;
@@ -241,9 +241,9 @@ impl PPU {
     fn print_to_screen(&mut self) {
         // print to screen
         if self.background_fifo.len() > 8 {
+            println!("-------------------------------------------------------");
             let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
             let value = self.background_fifo.remove(0);
-            println!("Value: {:X}", value);
             let color = match value {
                 0 => 0x000000,
                 1 => 0x555555,
@@ -251,7 +251,6 @@ impl PPU {
                 3 => 0xFFFFFF,
                 _ => 0x000000,
             };
-            println!("ADDRESS: {}  COLOR: {}", address, color);
             self.buffer[address] = color;
             self.fifo_x_coordinate += 1;
         }
