@@ -156,6 +156,7 @@ impl PPU {
                 if self.fifo_x_coordinate >= 160 {
                     self.fifo_x_coordinate = 0;
                     self.background_fifo.clear();
+                    self.is_there_data = false;
                     self.fetcher_x = 0;
                     self.state = Ppumode::HBlank;
                 }
