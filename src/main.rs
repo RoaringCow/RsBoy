@@ -23,7 +23,7 @@ fn main() {
 
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
-    cpu.memory.write_memory(0x9001, 0xFF);
+    cpu.memory.write_memory(0x9001, 0xAA);
     for x in 0x9800..0x9C00 {
         cpu.memory.write_memory(x, 0x00);
     }
@@ -45,7 +45,7 @@ fn main() {
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
         window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(10));
         
         
         

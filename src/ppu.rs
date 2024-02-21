@@ -11,7 +11,7 @@ pub struct PPU {
     pub oam: [u8; 0xA0], // Object Attribute Memory
 
 
-    pub cycle: u8,
+    pub cycle: u16,
 
     // Status Registers
     // FF40 - LCDC - LCD Control (R/W)
@@ -57,8 +57,7 @@ pub struct PPU {
 
 
     pub state: Ppumode, 
-    pub ticks: u8,
-   
+
     pub fetcher_x: u8,
 
     pub fifo_x_coordinate: u8,
@@ -69,6 +68,7 @@ pub struct PPU {
 
     pub tile_number : u8,
     pub tile_data: u16,
+    pub is_there_data: bool,
 }
 
 
@@ -88,7 +88,6 @@ impl PPU {
         self.wy = 0;
         self.wx = 0;
         self.state = Ppumode::OAM;
-        self.ticks = 0;
         self.fetcher_x = 0;
         self.current_line = 0;
 
@@ -112,7 +111,6 @@ impl PPU {
             wy: 0,
             wx: 0,
             state: Ppumode::VRAM,
-            ticks: 0,
             fetcher_x: 0,
             background_fifo: Vec::new(),
             fifo_x_coordinate: 0,
@@ -121,6 +119,7 @@ impl PPU {
 
             tile_number: 0,
             tile_data: 0,
+            is_there_data: false,
 
         }
     }
@@ -131,7 +130,8 @@ impl PPU {
             Ppumode::OAM => {
 
                 // OAM Search
-                
+
+                /*
                 // set stat interrupt
                 if self.ly == self.lyc {
                     self.stat |= 0x04;
@@ -146,12 +146,17 @@ impl PPU {
 
                     self.ticks += 2;
                 }
-            
+                */
+                println!("OAM");
+                self.cycle = 80;
+                self.state = Ppumode::VRAM;
             }
             Ppumode::VRAM => {
 
                 if self.fifo_x_coordinate >= 160 {
                     self.fifo_x_coordinate = 0;
+                    self.background_fifo.clear();
+                    self.fetcher_x = 0;
                     self.state = Ppumode::HBlank;
                 }
                 match self.cycle % 8 {
@@ -163,6 +168,7 @@ impl PPU {
                     4 => {
                         // read data 1
                         self.tile_data = self.get_tile_data(self.tile_number);
+                        self.is_there_data = true;
                     }
                     _ => {}
                 }
@@ -181,7 +187,19 @@ impl PPU {
                 
             }
             Ppumode::HBlank => {
+                println!("HBlank");
+                //cycle
+                println!("Cycle: {}", self.cycle);
                 // HBlank
+                if self.cycle >= 456 {
+                    self.cycle = 0;
+                    self.current_line += 1;
+                    if self.current_line == 144 {
+                        self.state = Ppumode::VBlank;
+                    } else {
+                        self.state = Ppumode::OAM;
+                    }
+                }
             }
             Ppumode::VBlank => {
                 // VBlank
@@ -224,18 +242,21 @@ impl PPU {
     }
 
     fn push_to_fifo(&mut self) {
-        if self.background_fifo.len() <= 8 {
-            let first_byte: u8 = (self.tile_data >> 8) as u8;
-            let second_byte: u8 = self.tile_data as u8;
-                
-            for i in 0..8 {
-                // split and get the representing color
-                // lsb becomes the msb for the pixel and msb becomes the lsb
-                let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
-                println!("Color: {}", color);
-                self.background_fifo.push(color as u8);
+        if self.is_there_data {
+            if self.background_fifo.len() <= 8 {
+                let first_byte: u8 = (self.tile_data >> 8) as u8;
+                let second_byte: u8 = self.tile_data as u8;
+
+                for i in 0..8 {
+                    // split and get the representing color
+                    // lsb becomes the msb for the pixel and msb becomes the lsb
+                    let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
+                    println!("Color: {}", color);
+                    self.background_fifo.push(color as u8);
+                }
+                self.tile_data = 0;
+                self.is_there_data = false;
             }
-            self.tile_data = 0;
         }
     }
     fn print_to_screen(&mut self) {
