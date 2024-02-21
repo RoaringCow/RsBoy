@@ -33,11 +33,11 @@ impl Memory {
 
     }
     pub fn read_memory(&self, address: u16) -> u8 {
-        print!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
-        let value = match address {
+        //print!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
+        let value = match address % 0xFFFF {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] as u8, // VRAM
-            0xA000..=0xBFFF => todo!(), // External RAM
+            0xA000..=0xBFFF => 0xFF, // External RAM
             0xC000..=0xDFFF => self.wram[address as usize - 0xC000], // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000], // Echo RAM
             0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00],//self.gpu.read_oam(address), // OAM
@@ -64,16 +64,16 @@ impl Memory {
 
             // özel bir ram dosyası oluştur
         };
-        println!("    value: \x1b[38;2;255;0;0m{:X}\x1b[0m", value);
+        //println!("    value: \x1b[38;2;255;0;0m{:X}\x1b[0m", value);
         value
     }
 
     pub fn write_memory(&mut self, address: u16, value: u8) {
-        println!("\x1b[38;2;255;255;0mwriting memory\x1b[0m at address: \x1b[38;2;255;0;255m{:4X}\x1b[0m    value: \x1b[38;2;255;0;255m{:2X}\x1b[0m", address, value);
-        match address {
+        //println!("\x1b[38;2;255;255;0mwriting memory\x1b[0m at address: \x1b[38;2;255;0;255m{:4X}\x1b[0m    value: \x1b[38;2;255;0;255m{:2X}\x1b[0m", address, value);
+        match address % 0xFFFF {
             0x0000..=0x7FFF => self.rom.rom[address as usize] = value, // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] = value, // VRAM
-            0xA000..=0xBFFF => todo!(), // External RAM
+            0xA000..=0xBFFF => (), // External RAM
             0xC000..=0xCFFF => self.wram[address as usize - 0xC000] = value, // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000] = value, // Echo RAM
             0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00] = value,//self.gpu.read_oam(address), // OAM

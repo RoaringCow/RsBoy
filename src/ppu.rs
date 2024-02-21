@@ -147,7 +147,6 @@ impl PPU {
                     self.ticks += 2;
                 }
                 */
-                println!("OAM");
                 self.cycle = 80;
                 self.state = Ppumode::VRAM;
             }
@@ -172,8 +171,6 @@ impl PPU {
                     }
                     _ => {}
                 }
-                println!("background fifo: {:?}", self.background_fifo);
-                println!("Cycle: {}", self.cycle);
                 self.print_to_screen();
                 self.push_to_fifo();
                 
@@ -187,9 +184,7 @@ impl PPU {
                 
             }
             Ppumode::HBlank => {
-                println!("HBlank");
                 //cycle
-                println!("Cycle: {}", self.cycle);
                 // HBlank
                 if self.cycle >= 456 {
                     self.cycle = 0;
@@ -236,8 +231,6 @@ impl PPU {
         };
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
-        println!("tile number: {:X}", tile_number);
-        println!("\x1b[38;2;200;100;0m Address to get tile data: \x1b[0m: {:X}", tile_address);
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
@@ -251,7 +244,6 @@ impl PPU {
                     // split and get the representing color
                     // lsb becomes the msb for the pixel and msb becomes the lsb
                     let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
-                    println!("Color: {}", color);
                     self.background_fifo.push(color as u8);
                 }
                 self.tile_data = 0;
@@ -262,7 +254,6 @@ impl PPU {
     fn print_to_screen(&mut self) {
         // print to screen
         if self.background_fifo.len() > 8 {
-            println!("-------------------------------------------------------");
             let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
             let value = self.background_fifo.remove(0);
             let color = match value {

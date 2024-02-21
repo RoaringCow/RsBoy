@@ -9,12 +9,11 @@ mod gameboy_io;
 use std::fs::File;
 use std::io::{self, Read};
 
-
 use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 5;
+const SCALE: usize = 4;
 
 #[allow(dead_code)]
 const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
@@ -37,29 +36,24 @@ fn main() {
     .unwrap_or_else(|e| {
         panic!("{}", e);
     });
-    
-    window.limit_update_rate(Some(std::time::Duration::from_millis(1000/5)));
-    
+
+    window.limit_update_rate(Some(std::time::Duration::from_millis(1000/60)));
+
+    let mut x = 0;
+    let mut now = time::Instant::now();
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
-        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        thread::sleep(time::Duration::from_millis(10));
-        
-        
-        
+        if x % 35112 == 0 {
+            window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+            println!("display updated in: {:?}", now.elapsed());
+            now = time::Instant::now();
+        }
+
+        x += 1;
     }
     
-    /*
-    let tile_data = 0b0000010010000000;
-    let first_byte: u8 = (tile_data >> 8) as u8;
-    let second_byte: u8 = tile_data as u8; 
-   for i in 0..8 {
-       let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1 ;
-       println!("Color: {:b}", color);
-    }
-    */
 
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
     cpu.memory.write_memory(0x9000, 0x31);

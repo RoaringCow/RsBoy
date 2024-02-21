@@ -1346,7 +1346,6 @@ impl CPU {
             _ => 4
 
         };
-        println!("opcode: \x1b[38;2;255;0;255m{:x}\x1b[0m, cycles: {}", opcode, cycles);
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
 
     }
@@ -1579,7 +1578,6 @@ impl CPU {
             // Test bit in register
             // -----------------------------------------
             0b01 => {
-                println!("BIT");
                 self.registers.f = self.registers.f | 0b00100000;
 
                 let cycles: u8;
@@ -1606,7 +1604,6 @@ impl CPU {
             // Reset bit in register
             // -----------------------------------------
             0b10 => {
-                println!("RES");
                 let cycles: u8;
                 let bit_to_reset = cb_opcode >> 3 & 0x07;
                 if cb_opcode & 0x0F == 0b110 {
@@ -1627,7 +1624,6 @@ impl CPU {
             // Set bit in register
             // -----------------------------------------
             0b11 => {
-                println!("SET");
                 let cycles: u8;
                 let bit_to_set = cb_opcode >> 3 & 0x07;
                 if cb_opcode & 0x0F == 0b110 {
