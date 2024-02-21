@@ -37,7 +37,8 @@ fn main() {
         panic!("{}", e);
     });
 
-    window.limit_update_rate(Some(std::time::Duration::from_millis(1000/60)));
+    window.limit_update_rate(Some(std::time::Duration::from_micros(16740)));
+
 
     let mut x = 0;
     let mut now = time::Instant::now();
