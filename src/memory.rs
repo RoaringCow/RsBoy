@@ -6,7 +6,6 @@ pub struct Memory {
     pub rom: Cartridge, // rom
     pub ppu: PPU, // ppu
     wram: [u8; 0x2000], // work ram
-    oam: [u8; 0x100], // object attribute memory
     io: [u8; 0x80], // io ports
     hram: [u8; 0x7F], // high ram
     ie: u8, // interrupt enable register
@@ -15,7 +14,6 @@ impl Memory {
     pub fn reset(&mut self) {
         self.ppu.reset();
         self.wram = [0; 0x2000];
-        self.oam = [0; 0x100];
         self.io = [0; 0x80];
         self.hram = [0; 0x7F];
         self.ie = 0;
@@ -25,7 +23,6 @@ impl Memory {
             rom: Cartridge::new(file),
             ppu: PPU::new(),
             wram: [0; 0x2000],
-            oam: [0; 0x100],
             io: [0; 0x80],
             hram: [0; 0x7F],
             ie: 0,
