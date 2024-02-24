@@ -1,10 +1,11 @@
 use minifb::Scale;
-
+use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
 
 
+#[derive(Debug)]
 pub struct PPU {
     pub buffer: [u32; WIDTH * HEIGHT], // Change type to array
     pub vram: [u8; 0x2000], // Video RAM
@@ -26,7 +27,6 @@ pub struct PPU {
     pub lcdc: u8,
 
      // FF41 - STAT - LCDC Status (R/W)
-    // TO BE EXPLAINED
     pub stat: u8,
 
     // FF42 - SCY - Scroll Y (R/W)
@@ -64,17 +64,34 @@ pub struct PPU {
 
     pub current_line : u8,
 
+
+    // background fifo stuff
     pub background_fifo: Vec<u8>,
 
+
+    // fetching sprite or background
     pub tile_number : u8,
     pub tile_data: u16,
     pub is_there_data: bool,
+
+    // Sprite fetching stuff
+
+    pub fetcher_mode: Fetchmode,
+    pub sprite_fifo: Vec<u8>,
+    pub sprite_buffer: Vec<u32>,
+    pub fifo_push: bool,
+    // this is to simulate the two dots sizes of the fetcher operations
+    pub fetcher_cycle: u8,
+
+
+
 }
 
 
 
 #[allow(dead_code)]
 impl PPU {
+
     pub fn reset(&mut self) {
         self.buffer = [0; WIDTH * HEIGHT];
         self.cycle = 0;
@@ -93,7 +110,6 @@ impl PPU {
 
 
     }
-
     // Create a new display
     pub fn new() -> Self {
         Self {
@@ -110,16 +126,25 @@ impl PPU {
             palette: 0,
             wy: 0,
             wx: 0,
-            state: Ppumode::VRAM,
+            state: Ppumode::OAM,
             fetcher_x: 0,
+
             background_fifo: Vec::new(),
             fifo_x_coordinate: 0,
+            fifo_push: true,
 
             current_line: 0,
 
             tile_number: 0,
             tile_data: 0,
             is_there_data: false,
+
+            sprite_fifo: Vec::new(),
+            sprite_buffer: Vec::new(),
+
+            fetcher_cycle: 0,
+            fetcher_mode: Fetchmode::Background,
+
 
         }
     }
@@ -131,24 +156,28 @@ impl PPU {
 
                 // OAM Search
 
+
+
+
                 /*
-                // set stat interrupt
-                if self.ly == self.lyc {
-                    self.stat |= 0x04;
-                } else {
-                    self.stat &= !0x04;
-                }
-
-                if self.ticks >= 80 {
-                    self.state = Ppumode::VRAM;
-                    self.ticks = 0;
-                } else {
-
-                    self.ticks += 2;
-                }
+                Sprite X-Position must be greater than 0
+                LY + 16 must be greater than or equal to Sprite Y-Position
+                LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
+                The amount of sprites already stored in the OAM Buffer must be less than 10
                 */
-                self.cycle = 80;
-                self.state = Ppumode::VRAM;
+                let current_sprite_number = self.cycle / 2;
+                let sprite_y: u8= self.oam[current_sprite_number as usize];
+                let sprite_x: u8= self.oam[current_sprite_number as usize + 1];
+                let sprite_tile_index: u8 = self.oam[current_sprite_number as usize + 2];
+                let sprite_flags: u8 = self.oam[current_sprite_number as usize + 3];
+                if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_fifo.len() < 10 {
+                    let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
+                    self.sprite_buffer.push(sprite_that_fits);
+                }
+
+                if self.cycle >= 80 {
+                    self.state = Ppumode::VRAM;
+                }
             }
             Ppumode::VRAM => {
 
@@ -159,35 +188,102 @@ impl PPU {
                     self.fetcher_x = 0;
                     self.state = Ppumode::HBlank;
                 }
-                match self.cycle % 8 {
-                    0 => {
-                        // read_tile
-                        self.tile_number = self.get_tile();
+
+                /*
+                If the X-Position of any sprite in the sprite buffer is less than or equal to
+                the current Pixel-X-Position + 8, a sprite fetch is initiated.
+                This resets the Background Fetcher to step 1 and temporarily pauses it,
+                the pixel shifter which pushes pixels to the LCD is also suspended.
+                The Sprite Fetcher works very similarly to the background fetcher:
+
+                1) Fetch Tile No.: Same as the first Background Fetcher step, however, the tile number is simply read from the Sprite Buffer rather than VRAM.
+
+                    2) Fetch Tile Data (Low): Same as the corresponding Background Fetcher step, however, Sprites always use 8000-addressing-mode, so this step is not affected by any LCDC bits.
+
+                    3) Fetch Tile Data (High): Same as the corresponding Background Fetcher step.
+
+                    4) Push to FIFO: The fetched pixel data is loaded into the FIFO on the first cycle of this step, allowing the first sprite pixel to be rendered in the same cycle. However, the check determining whether new sprite pixels should be rendered is done first, which can cause the PPU to not shift out any pixels at all between two sprite fetches, for example if both sprites have X-values below 8 or both sprites have the same X-value.
+
+                    Note: During this step only pixels which are actually visible on the screen are loaded into the FIFO. A sprite with an X-value of 8 would have all 8 pixels loaded, while a sprite with an X-value of 7 would only have the rightmost 7 pixels loaded. Additionally, pixels can only be loaded into FIFO slots if there is no pixel in the given slot already. For example, if the Sprite FIFO contains one sprite pixel from a previously fetched sprite, the first pixel of the currently fetched sprite is discarded and only the last 7 pixels are loaded into the FIFO, while the pixel from the first sprite is preserved.
+                */
+
+
+                if self.fetcher_mode == Fetchmode::Background {
+                    if self.sprite_buffer.len() > 0 && (self.sprite_buffer[0] >> 16) as u8 == self.fifo_x_coordinate {
+                        self.fetcher_mode = Fetchmode::Sprite;
+                        self.fifo_push = false;
+                        self.fetcher_cycle = 0;
                     }
-                    // Artificially simulating the cycles
-                    4 => {
-                        // read data 1
-                        self.tile_data = self.get_tile_data(self.tile_number);
-                        self.is_there_data = true;
-                    }
-                    _ => {}
                 }
-                self.print_to_screen();
-                self.push_to_fifo();
-                
 
 
-                
+                match self.fetcher_mode {
+                    Fetchmode::Background => {
+                        match self.fetcher_cycle % 8 {
+                            0 => {
+                                // read_tile
+                                self.tile_number = self.get_tile();
+                            }
+                            // Artificially simulating the cycles
+                            5 => {
+                                // read data 1
+                                self.tile_data = self.get_tile_data(self.tile_number);
+                                self.is_there_data = true;
+                            }
+                            _ => {}
+                        }
+                        self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
+
+
+                        // GELECEĞE NOT
+                        // FETCHER X ARTMIYOR.
+                        self.push_to_background_fifo();
+                    }
+                    Fetchmode::Sprite => {
+                        match self.fetcher_cycle % 8 {
+                            0 => {
+                                // read_tile
+                                self.tile_number = self.get_tile();
+                            }
+                            // Artificially simulating the cycles
+                            5 => {
+                                // read data 1
+                                self.tile_data = self.get_tile_data(self.tile_number);
+                                self.is_there_data = true;
+                                // boş boş uğraşmamak için. Zaten + 1 olacak. Bir de üstüne kontrol mü edeceğim.
+                                self.fetcher_cycle = u8::from(0).wrapping_sub(1); // 255
+
+                                // THIS MIGHT BE A BAD WAY
+                                self.sprite_buffer.remove(0);
+                                //--------------------------------
+
+
+                                self.fetcher_mode = Fetchmode::Background;
+                                self.fifo_push = true;
+                            }
+                            _ => {}
+                        }
+                        self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
+                        println!("fetcher_cycle: {:?}", self.fetcher_cycle);
+                    }
+                }
+
+                if self.fifo_push {
+                    self.print_to_screen();
+                }
 
 
 
 
-                
+
+
             }
             Ppumode::HBlank => {
                 //cycle
                 // HBlank
                 if self.cycle >= 456 {
+                    self.sprite_fifo.clear();
+                    self.sprite_buffer.clear();
                     self.cycle = 0;
                     self.current_line += 1;
                     if self.current_line == 144 {
@@ -199,6 +295,14 @@ impl PPU {
             }
             Ppumode::VBlank => {
                 // VBlank
+                if self.cycle >= 456 {
+                    self.cycle = 0;
+                    self.current_line += 1;
+                    if self.current_line > 153 {
+                        self.current_line = 0;
+                        self.state = Ppumode::OAM;
+                    }
+                }
             }
         }
 
@@ -206,36 +310,50 @@ impl PPU {
     }
 
     fn get_tile(&mut self) -> u8 {
-        // get tile index
-        let tile_base_address = match self.lcdc >> 3 & 1 == 0 {
-            true => 0x9800,
-            false => 0x9C00,
-        };
-        
-        // scx is scrolled to get it divided by 8 (tile size)
+        match self.fetcher_mode {
+            Fetchmode::Background => {
+                // get tile index
+                let tile_base_address = match self.lcdc >> 3 & 1 == 0 {
+                    true => 0x9800,
+                    false => 0x9C00,
+                };
+                // scx is scrolled to get it divided by 8 (tile size)
 
-        let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
-        let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
-        let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
-        self.fetcher_x += 1;
-        self.vram[tile_address as usize - 0x8000]
+                let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
+                let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
+                let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
+                self.fetcher_x += 1;
+                self.vram[tile_address as usize - 0x8000]
+            },
+            Fetchmode::Sprite => {
+                ((self.sprite_buffer[0] >> 8) & 0xFF) as u8
+            }
+        }
     }
 
     fn get_tile_data(&self, tile_number: u8) -> u16 {
         let mut tile_id = tile_number as u16;
-        let base_address = match self.lcdc >> 4 & 1 == 0 {
-            true => {
-                tile_id = tile_id.wrapping_add(128);
-                0x8800
+        let base_address = match self.fetcher_mode {
+            Fetchmode::Background => {
+                match self.lcdc >> 4 & 1 == 0 {
+                    true => {
+                        tile_id = tile_id.wrapping_add(128);
+                        0x8800
+                    },
+                    false => 0x8000,
+                }
             },
-            false => 0x8000,
+            Fetchmode::Sprite => {
+                0x8000
+            }
         };
+
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
-    fn push_to_fifo(&mut self) {
+    fn push_to_background_fifo(&mut self) {
         if self.is_there_data {
             if self.background_fifo.len() <= 8 {
                 let first_byte: u8 = (self.tile_data >> 8) as u8;
@@ -245,7 +363,7 @@ impl PPU {
                     // split and get the representing color
                     // lsb becomes the msb for the pixel and msb becomes the lsb
                     let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
-                    self.background_fifo.push(color as u8);
+                    self.background_fifo.push(color);
                 }
                 self.tile_data = 0;
                 self.is_there_data = false;
@@ -269,10 +387,16 @@ impl PPU {
         }
         
     }
+    fn fetcher_mix(&mut self, value: u16) {
+        // mix the background and sprite fetchers
+
+
+    }
 
 
 }
 
+#[derive(Debug)]
 pub enum Ppumode {
     HBlank,
     VBlank,
@@ -280,3 +404,10 @@ pub enum Ppumode {
     VRAM,
 }
 
+
+#[derive(Debug, PartialEq)]
+pub enum Fetchmode {
+    Background,
+    Sprite,
+    //Window,
+}

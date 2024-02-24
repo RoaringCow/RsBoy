@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::{self, Read};
 
 use std::{thread, time};
+use crate::ppu::Ppumode;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
@@ -23,6 +24,11 @@ fn main() {
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
     cpu.memory.write_memory(0x9001, 0xAA);
+
+    // 0xFE9F
+    cpu.memory.write_memory(0xFE00, 0x10);
+    cpu.memory.write_memory(0xFE01, 0x10);
+
     for x in 0x9800..0x9C00 {
         cpu.memory.write_memory(x, 0x00);
     }
@@ -37,20 +43,28 @@ fn main() {
         panic!("{}", e);
     });
 
-    window.limit_update_rate(Some(std::time::Duration::from_micros(16740)));
+    window.limit_update_rate(Some(time::Duration::from_micros(16740)));
+    //window.limit_update_rate(Some(time::Duration::from_micros(1674)));
 
 
     let mut x = 0;
+    let mut a = false;
     let mut now = time::Instant::now();
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
-        if x % 35112 == 0 {
+
+        // fifo
+        //println!("fifo: {:?}", cpu.memory.ppu.background_fifo);
+        if x == 35112{
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
+
+            x = 0;
         }
+
 
         x += 1;
     }
