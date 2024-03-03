@@ -26,7 +26,7 @@ pub struct PPU {
     // bit 0 - BG Display (for CGB see below) (0=Off, 1=On)
     pub lcdc: u8,
 
-     // FF41 - STAT - LCDC Status (R/W)
+    // FF41 - STAT - LCDC Status (R/W)
     pub stat: u8,
 
     // FF42 - SCY - Scroll Y (R/W)
@@ -35,7 +35,7 @@ pub struct PPU {
     pub scx: u8,
 
     // FF44 - LY - LCDC Y-Coordinate (Read only)
-    pub ly: u8, 
+    pub ly: u8,
 
 
     // FF45 - LYC - (Read/Write)
@@ -43,7 +43,7 @@ pub struct PPU {
     // used for games that need to know 
     // when a specific line is reached
     pub lyc: u8,
-    
+
     // FF47 - BGP - BG Palette Data (R/W)
     pub palette: u8,
 
@@ -56,7 +56,7 @@ pub struct PPU {
 
 
 
-    pub state: Ppumode, 
+    pub state: Ppumode,
 
     pub fetcher_x: u8,
 
@@ -77,11 +77,11 @@ pub struct PPU {
     // Sprite fetching stuff
 
     pub fetcher_mode: Fetchmode,
-    pub sprite_fifo: Vec<u8>,
     pub sprite_buffer: Vec<u32>,
     pub fifo_push: bool,
     // this is to simulate the two dots sizes of the fetcher operations
     pub fetcher_cycle: u8,
+
 
 
 
@@ -119,9 +119,9 @@ impl PPU {
             cycle: 0,
             lcdc: 0,
             stat: 0,
-            scy: 0, 
+            scy: 0,
             scx: 0,
-            ly: 0, 
+            ly: 0,
             lyc: 0,
             palette: 0,
             wy: 0,
@@ -139,11 +139,11 @@ impl PPU {
             tile_data: 0,
             is_there_data: false,
 
-            sprite_fifo: Vec::new(),
             sprite_buffer: Vec::new(),
 
             fetcher_cycle: 0,
             fetcher_mode: Fetchmode::Background,
+
 
 
         }
@@ -151,33 +151,51 @@ impl PPU {
 
 
     pub fn tick(&mut self) {
+        let mut end_of_line = false;
         match self.state {
             Ppumode::OAM => {
 
                 // OAM Search
 
-
-
-
-                /*
-                Sprite X-Position must be greater than 0
-                LY + 16 must be greater than or equal to Sprite Y-Position
-                LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
-                The amount of sprites already stored in the OAM Buffer must be less than 10
-                */
-                let current_sprite_number = self.cycle / 2;
-                let sprite_y: u8= self.oam[current_sprite_number as usize];
-                let sprite_x: u8= self.oam[current_sprite_number as usize + 1];
-                let sprite_tile_index: u8 = self.oam[current_sprite_number as usize + 2];
-                let sprite_flags: u8 = self.oam[current_sprite_number as usize + 3];
-                if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_fifo.len() < 10 {
-                    let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
-                    self.sprite_buffer.push(sprite_that_fits);
-                }
-
                 if self.cycle >= 80 {
+                    /*
+                    if self.sprite_buffer.len() > 0 {
+                        println!("sprite ALERT!  {}", self.current_line);
+                    }
+                    for x in self.sprite_buffer.iter() {
+                        println!("sprite buffer: {}", x >> 24);
+                    }
+                    println!("oam: {:?}", self.oam);
+                    */
                     self.state = Ppumode::VRAM;
+                } else {
+
+
+                    /*
+                    Sprite X-Position must be greater than 0
+                    LY + 16 must be greater than or equal to Sprite Y-Position
+                    LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
+                    The amount of sprites already stored in the OAM Buffer must be less than 10
+                    */
+
+                    if (self.cycle) % 2 == 0 {
+                        // the OAM search is 80 cycles long and in each 2 cycle it checks for 1 sprite
+                        // so self.cycle % 2 == 0 is to only do 40 sprite checks.
+                        // and the self.cycle * 2 is to get the sprite number
+                        let current_sprite_number = (self.cycle) * 2;
+                        let sprite_y: u8= self.oam[(current_sprite_number) as usize];
+                        let sprite_x: u8= self.oam[(current_sprite_number) as usize + 1];
+                        let sprite_tile_index: u8 = self.oam[(current_sprite_number) as usize + 2];
+                        let sprite_flags: u8 = self.oam[(current_sprite_number) as usize + 3];
+                        //println!("{} {} {} {}", sprite_x > 0, self.current_line + 16 >= sprite_y, self.current_line + 16 < sprite_y + 8, self.sprite_buffer.len() < 10);
+                        if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
+                            let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
+                            self.sprite_buffer.push(sprite_that_fits);
+                        }
+                    }
                 }
+
+
             }
             Ppumode::VRAM => {
 
@@ -185,7 +203,6 @@ impl PPU {
                     self.fifo_x_coordinate = 0;
                     self.background_fifo.clear();
                     self.is_there_data = false;
-                    self.fetcher_x = 0;
                     self.state = Ppumode::HBlank;
                 }
 
@@ -209,7 +226,7 @@ impl PPU {
 
 
                 if self.fetcher_mode == Fetchmode::Background {
-                    if self.sprite_buffer.len() > 0 && (self.sprite_buffer[0] >> 16) as u8 == self.fifo_x_coordinate {
+                    if self.sprite_buffer.len() > 0 && (self.sprite_buffer[0] >> 16) as u8 - 8 == self.fifo_x_coordinate {
                         self.fetcher_mode = Fetchmode::Sprite;
                         self.fifo_push = false;
                         self.fetcher_cycle = 0;
@@ -235,11 +252,17 @@ impl PPU {
                         self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
 
 
-                        // GELECEĞE NOT
-                        // FETCHER X ARTMIYOR.
                         self.push_to_background_fifo();
                     }
                     Fetchmode::Sprite => {
+                        if self.fetcher_x == 0 {
+                            self.fetcher_mode = Fetchmode::Background;
+                            self.tile_number = self.get_tile();
+                            self.tile_data = self.get_tile_data(self.tile_number);
+                            self.is_there_data = true;
+                            self.push_to_background_fifo();
+                            self.fetcher_mode = Fetchmode::Sprite;
+                        }
                         match self.fetcher_cycle % 8 {
                             0 => {
                                 // read_tile
@@ -253,6 +276,8 @@ impl PPU {
                                 // boş boş uğraşmamak için. Zaten + 1 olacak. Bir de üstüne kontrol mü edeceğim.
                                 self.fetcher_cycle = u8::from(0).wrapping_sub(1); // 255
 
+                                self.sprite_background_mix();
+
                                 // THIS MIGHT BE A BAD WAY
                                 self.sprite_buffer.remove(0);
                                 //--------------------------------
@@ -264,13 +289,13 @@ impl PPU {
                             _ => {}
                         }
                         self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
-                        println!("fetcher_cycle: {:?}", self.fetcher_cycle);
                     }
                 }
 
                 if self.fifo_push {
                     self.print_to_screen();
                 }
+                //println!("fifo:  {:?}  {:?}        {}", self.fetcher_mode, self.background_fifo, self.fetcher_x);
 
 
 
@@ -282,14 +307,16 @@ impl PPU {
                 //cycle
                 // HBlank
                 if self.cycle >= 456 {
-                    self.sprite_fifo.clear();
                     self.sprite_buffer.clear();
                     self.cycle = 0;
                     self.current_line += 1;
                     if self.current_line == 144 {
                         self.state = Ppumode::VBlank;
+                        end_of_line = true;
                     } else {
+                        self.fetcher_x = 0;
                         self.state = Ppumode::OAM;
+                        end_of_line = true;
                     }
                 }
             }
@@ -306,7 +333,10 @@ impl PPU {
             }
         }
 
-        self.cycle += 1;
+        // this prevents increasing cycles when switching to the next line
+        if !end_of_line {
+            self.cycle += 1;
+        }
     }
 
     fn get_tile(&mut self) -> u8 {
@@ -326,7 +356,7 @@ impl PPU {
                 self.vram[tile_address as usize - 0x8000]
             },
             Fetchmode::Sprite => {
-                ((self.sprite_buffer[0] >> 8) & 0xFF) as u8
+                (self.sprite_buffer[0] >> 8 & 0xFF) as u8
             }
         }
     }
@@ -385,11 +415,36 @@ impl PPU {
             self.buffer[address] = color;
             self.fifo_x_coordinate += 1;
         }
-        
+
     }
-    fn fetcher_mix(&mut self, value: u16) {
+    fn sprite_background_mix(&mut self) {
         // mix the background and sprite fetchers
 
+        let first_byte: u8 = (self.tile_data >> 8) as u8;
+        let second_byte: u8 = self.tile_data as u8;
+
+        for i in 0..8 {
+            // split and get the representing color
+            // lsb becomes the msb for the pixel and msb becomes the lsb
+            let color = (first_byte >> (7 - i) & 1) | ((second_byte >> (7 - i)) & 1) << 1;
+
+            if color == 0 {
+                continue;
+            }
+            if self.sprite_buffer[0] >> 7 & 1 == 1 && self.background_fifo[0] != 0 {
+                continue;
+            }
+
+            // ARA SIRA NEDENSE FIFODA VERİ OLMUYOR.
+            self.background_fifo[i] = color;
+        }
+        self.tile_data = 0;
+
+        /*
+            1) If the color number of the Sprite Pixel is 0, the Background Pixel is pushed to the LCD.
+                2) If the BG-to-OBJ-Priority bit is 1 and the color number of the Background Pixel is anything other than 0, the Background Pixel is pushed to the LCD.
+                3) If none of the above conditions apply, the Sprite Pixel is pushed to the LCD.
+            */
 
     }
 

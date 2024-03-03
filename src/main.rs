@@ -23,14 +23,46 @@ fn main() {
 
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
-    cpu.memory.write_memory(0x9001, 0xAA);
+    cpu.memory.write_memory(0x8800, 0xFF);
 
-    // 0xFE9F
+    //spite tile data
+    let color: u8= 0xFF;
+    cpu.memory.write_memory(0x8810, color);
+    cpu.memory.write_memory(0x8811, 0x00);
+    cpu.memory.write_memory(0x8812, color);
+    cpu.memory.write_memory(0x8813, 0x00);
+    cpu.memory.write_memory(0x8814, color);
+    cpu.memory.write_memory(0x8815, 0x00);
+    cpu.memory.write_memory(0x8816, color);
+    cpu.memory.write_memory(0x8817, 0x00);
+    cpu.memory.write_memory(0x8818, color);
+    cpu.memory.write_memory(0x8819, 0x00);
+    cpu.memory.write_memory(0x881A, color);
+    cpu.memory.write_memory(0x881B, 0x00);
+    cpu.memory.write_memory(0x881C, color);
+    cpu.memory.write_memory(0x881D, 0x00);
+    cpu.memory.write_memory(0x881E, color);
+    cpu.memory.write_memory(0x881F, 0x00);
+    //-----------------------------------------------
+
+
+    cpu.memory.write_memory(0x7FF0, 0xC3);
+    cpu.memory.write_memory(0x7FF1, 0x00);
+    cpu.memory.write_memory(0x7FF2, 0x00);
+
+    // TEST SPRİTE/OBJECT
+
+    // OBJE KONUM HATALI
+
     cpu.memory.write_memory(0xFE00, 0x10);
-    cpu.memory.write_memory(0xFE01, 0x10);
+    cpu.memory.write_memory(0xFE01, 0x09);
+    cpu.memory.write_memory(0xFE02, 129);
+    // -----------------------------------------------
+
+
 
     for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 0x00);
+        cpu.memory.write_memory(x, 128);
     }
     
     let mut window = Window::new(
@@ -48,17 +80,20 @@ fn main() {
 
 
     let mut x = 0;
-    let mut a = false;
     let mut now = time::Instant::now();
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
 
-        // fifo
-        //println!("fifo: {:?}", cpu.memory.ppu.background_fifo);
+        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+
         if x == 35112{
+            //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
+            cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+            //let value = cpu.memory.read_memory(0xFE01);
+            //cpu.memory.write_memory(0xFE01, value + 1);
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
 
