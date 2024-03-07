@@ -54,15 +54,15 @@ fn main() {
 
     // OBJE KONUM HATALI
 
-    cpu.memory.write_memory(0xFE00, 0x10);
-    cpu.memory.write_memory(0xFE01, 0x09);
+    cpu.memory.write_memory(0xFE00, 0x20);
+    cpu.memory.write_memory(0xFE01, 0x20);
     cpu.memory.write_memory(0xFE02, 129);
     // -----------------------------------------------
 
 
 
     for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 128);
+        cpu.memory.write_memory(x, 129);
     }
     
     let mut window = Window::new(
@@ -90,7 +90,7 @@ fn main() {
 
         if x == 35112{
             //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
-            cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
+            //cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
             //let value = cpu.memory.read_memory(0xFE01);
             //cpu.memory.write_memory(0xFE01, value + 1);

@@ -157,42 +157,41 @@ impl PPU {
 
                 // OAM Search
 
-                if self.cycle >= 80 {
-                    /*
-                    if self.sprite_buffer.len() > 0 {
-                        println!("sprite ALERT!  {}", self.current_line);
+                /*
+                if self.sprite_buffer.len() > 0 {
+                    println!("sprite ALERT!  {}", self.current_line);
+                }
+                for x in self.sprite_buffer.iter() {
+                    println!("sprite buffer: {}", x >> 24);
+                }
+                println!("oam: {:?}", self.oam);
+                */
+
+                /*
+                Sprite X-Position must be greater than 0
+                LY + 16 must be greater than or equal to Sprite Y-Position
+                LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
+                The amount of sprites already stored in the OAM Buffer must be less than 10
+                */
+
+                if (self.cycle) % 2 == 0 {
+                    // the OAM search is 80 cycles long and in each 2 cycle it checks for 1 sprite
+                    // so self.cycle % 2 == 0 is to only do 40 sprite checks.
+                    // and the self.cycle * 2 is to get the sprite number
+                    let current_sprite_number = (self.cycle) * 2;
+                    let sprite_y: u8= self.oam[(current_sprite_number) as usize];
+                    let sprite_x: u8= self.oam[(current_sprite_number) as usize + 1];
+                    let sprite_tile_index: u8 = self.oam[(current_sprite_number) as usize + 2];
+                    let sprite_flags: u8 = self.oam[(current_sprite_number) as usize + 3];
+                    //println!("{} {} {} {}", sprite_x > 0, self.current_line + 16 >= sprite_y, self.current_line + 16 < sprite_y + 8, self.sprite_buffer.len() < 10);
+                    if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
+                        let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
+                        self.sprite_buffer.push(sprite_that_fits);
                     }
-                    for x in self.sprite_buffer.iter() {
-                        println!("sprite buffer: {}", x >> 24);
-                    }
-                    println!("oam: {:?}", self.oam);
-                    */
+                }
+
+                if self.cycle >= 79 {
                     self.state = Ppumode::VRAM;
-                } else {
-
-
-                    /*
-                    Sprite X-Position must be greater than 0
-                    LY + 16 must be greater than or equal to Sprite Y-Position
-                    LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
-                    The amount of sprites already stored in the OAM Buffer must be less than 10
-                    */
-
-                    if (self.cycle) % 2 == 0 {
-                        // the OAM search is 80 cycles long and in each 2 cycle it checks for 1 sprite
-                        // so self.cycle % 2 == 0 is to only do 40 sprite checks.
-                        // and the self.cycle * 2 is to get the sprite number
-                        let current_sprite_number = (self.cycle) * 2;
-                        let sprite_y: u8= self.oam[(current_sprite_number) as usize];
-                        let sprite_x: u8= self.oam[(current_sprite_number) as usize + 1];
-                        let sprite_tile_index: u8 = self.oam[(current_sprite_number) as usize + 2];
-                        let sprite_flags: u8 = self.oam[(current_sprite_number) as usize + 3];
-                        //println!("{} {} {} {}", sprite_x > 0, self.current_line + 16 >= sprite_y, self.current_line + 16 < sprite_y + 8, self.sprite_buffer.len() < 10);
-                        if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
-                            let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
-                            self.sprite_buffer.push(sprite_that_fits);
-                        }
-                    }
                 }
 
 
