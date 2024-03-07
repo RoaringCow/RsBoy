@@ -21,8 +21,8 @@ const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
-    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/my_test.gb");
-    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
+    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
+    //let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
     cpu.memory.write_memory(0x8800, 0xFF);
 
     //spite tile data
@@ -54,8 +54,8 @@ fn main() {
 
     // OBJE KONUM HATALI
 
-    cpu.memory.write_memory(0xFE00, 0x20);
-    cpu.memory.write_memory(0xFE01, 0x20);
+    cpu.memory.write_memory(0xFE00, 0x10);
+    cpu.memory.write_memory(0xFE01, 0x10);
     cpu.memory.write_memory(0xFE02, 129);
     // -----------------------------------------------
 
@@ -86,8 +86,22 @@ fn main() {
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
 
-        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-
+        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+        /*     
+        for x in 0..144 {
+            for y in 0..160 {
+                match cpu.memory.ppu.buffer[x * 160 + y] {
+                    0x000000 => print!(" "),
+                    0x555555 => print!("."),
+                    0xAAAAAA => print!("x"),
+                    0xFFFFFF => print!("X"),
+                    _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
+                }
+            }
+            println!();
+        }
+        */
+        println!("tile data: {:?}", cpu.memory.ppu.tile_data);
         if x == 35112{
             //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
             //cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);

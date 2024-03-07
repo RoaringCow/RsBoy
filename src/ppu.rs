@@ -62,7 +62,6 @@ pub struct PPU {
 
     pub fifo_x_coordinate: u8,
 
-    pub current_line : u8,
 
 
     // background fifo stuff
@@ -106,7 +105,6 @@ impl PPU {
         self.wx = 0;
         self.state = Ppumode::OAM;
         self.fetcher_x = 0;
-        self.current_line = 0;
 
 
     }
@@ -133,7 +131,6 @@ impl PPU {
             fifo_x_coordinate: 0,
             fifo_push: true,
 
-            current_line: 0,
 
             tile_number: 0,
             tile_data: 0,
@@ -184,7 +181,7 @@ impl PPU {
                     let sprite_tile_index: u8 = self.oam[(current_sprite_number) as usize + 2];
                     let sprite_flags: u8 = self.oam[(current_sprite_number) as usize + 3];
                     //println!("{} {} {} {}", sprite_x > 0, self.current_line + 16 >= sprite_y, self.current_line + 16 < sprite_y + 8, self.sprite_buffer.len() < 10);
-                    if sprite_x > 0 && self.current_line + 16 >= sprite_y && self.current_line + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
+                    if sprite_x > 0 && self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
                         let sprite_that_fits: u32 = ((sprite_y as u32) << 24) | ((sprite_x as u32) << 16) | ((sprite_tile_index as u32) << 8) | (sprite_flags as u32);
                         self.sprite_buffer.push(sprite_that_fits);
                     }
@@ -308,8 +305,8 @@ impl PPU {
                 if self.cycle >= 456 {
                     self.sprite_buffer.clear();
                     self.cycle = 0;
-                    self.current_line += 1;
-                    if self.current_line == 144 {
+                    self.ly += 1;
+                    if self.ly == 144 {
                         self.state = Ppumode::VBlank;
                         end_of_line = true;
                     } else {
@@ -323,9 +320,9 @@ impl PPU {
                 // VBlank
                 if self.cycle >= 456 {
                     self.cycle = 0;
-                    self.current_line += 1;
-                    if self.current_line > 153 {
-                        self.current_line = 0;
+                    self.ly += 1;
+                    if self.ly > 153 {
+                        self.ly = 0;
                         self.state = Ppumode::OAM;
                     }
                 }
@@ -349,7 +346,7 @@ impl PPU {
                 // scx is scrolled to get it divided by 8 (tile size)
 
                 let tile_x: u8 = ((self.scx >> 3) + self.fetcher_x) & 0x1F;
-                let tile_y: u8 = self.current_line.wrapping_add(self.scy) >> 3;
+                let tile_y: u8 = self.ly.wrapping_add(self.scy) >> 3;
                 let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
                 self.fetcher_x += 1;
                 self.vram[tile_address as usize - 0x8000]
@@ -379,6 +376,7 @@ impl PPU {
 
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
+        println!("tile address: {:X}  ly: {}  base: {}  tile_id: {}  tile_offset: {}  sc: {}", tile_address, self.ly, base_address, tile_id, tile_offset, self.scy);
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
@@ -402,7 +400,7 @@ impl PPU {
     fn print_to_screen(&mut self) {
         // print to screen
         if self.background_fifo.len() > 8 {
-            let address = self.fifo_x_coordinate as usize + self.current_line as usize * WIDTH;
+            let address = self.fifo_x_coordinate as usize + self.ly as usize * WIDTH;
             let value = self.background_fifo.remove(0);
             let color = match value {
                 0 => 0x000000,
