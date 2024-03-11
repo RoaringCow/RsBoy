@@ -349,9 +349,11 @@ impl PPU {
                 let tile_y: u8 = self.ly.wrapping_add(self.scy) >> 3;
                 let tile_address = tile_base_address + (tile_y as u16 * 32) + tile_x as u16;
                 self.fetcher_x += 1;
+                println!("get_tile (background) -> tile address: {:X}     tile_x: {}    tile_y: {}", tile_address, tile_x, tile_y);
                 self.vram[tile_address as usize - 0x8000]
             },
             Fetchmode::Sprite => {
+                println!("get_tile (sprite) -> tile address: {:X}", self.sprite_buffer[0] >> 8 & 0xFF);
                 (self.sprite_buffer[0] >> 8 & 0xFF) as u8
             }
         }
@@ -376,7 +378,7 @@ impl PPU {
 
         let tile_offset = 2 * (self.ly.wrapping_add(self.scy)) & 7; // & 7 is mod 8
         let tile_address = base_address + (tile_id as u16 * 16) + tile_offset as u16;
-        println!("tile address: {:X}  ly: {}  base: {}  tile_id: {}  tile_offset: {}  sc: {}", tile_address, self.ly, base_address, tile_id, tile_offset, self.scy);
+        println!("get_tile_data -> tile address: {:X}   value -> {:X}", tile_address, (self.vram[tile_address as usize - 0x8000] as u16) << 8 | self.vram[tile_address as usize - 0x8000 + 1] as u16);
         ((self.vram[tile_address as usize - 0x8000] as u16) << 8) | self.vram[tile_address as usize - 0x8000 + 1] as u16
     }
 
@@ -385,7 +387,7 @@ impl PPU {
             if self.background_fifo.len() <= 8 {
                 let first_byte: u8 = (self.tile_data >> 8) as u8;
                 let second_byte: u8 = self.tile_data as u8;
-
+                println!("push_to_background_fifo -> first_byte: {:08b}/{:X}  second_byte: {:08b}/{:X}", first_byte, first_byte, second_byte, second_byte);
                 for i in 0..8 {
                     // split and get the representing color
                     // lsb becomes the msb for the pixel and msb becomes the lsb
@@ -436,6 +438,7 @@ impl PPU {
             self.background_fifo[i] = color;
         }
         self.tile_data = 0;
+
 
         /*
             1) If the color number of the Sprite Pixel is 0, the Background Pixel is pushed to the LCD.

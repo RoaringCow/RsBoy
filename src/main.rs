@@ -21,9 +21,13 @@ const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
-    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
-    //let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb"); 
-    cpu.memory.write_memory(0x8800, 0xFF);
+    // last developed
+    // on linux
+    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
+    // on Mac
+    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
+
+    cpu.memory.write_memory(0x8080, 0x00);
 
     //spite tile data
     let color: u8= 0xFF;
@@ -62,7 +66,7 @@ fn main() {
 
 
     for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 129);
+        cpu.memory.write_memory(x, 128);
     }
     
     let mut window = Window::new(
@@ -84,7 +88,9 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
+        //thread::sleep(time::Duration::from_millis(100));
         cpu.memory.ppu.tick();
+        //thread::sleep(time::Duration::from_millis(100));
 
         window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
         /*     
