@@ -14,7 +14,7 @@ use crate::ppu::Ppumode;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 4;
+const SCALE: usize = 2;
 
 #[allow(dead_code)]
 const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
@@ -27,47 +27,6 @@ fn main() {
     // on Mac
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
-    cpu.memory.write_memory(0x8080, 0x00);
-
-    //spite tile data
-    let color: u8= 0xFF;
-    cpu.memory.write_memory(0x8810, color);
-    cpu.memory.write_memory(0x8811, 0x00);
-    cpu.memory.write_memory(0x8812, color);
-    cpu.memory.write_memory(0x8813, 0x00);
-    cpu.memory.write_memory(0x8814, color);
-    cpu.memory.write_memory(0x8815, 0x00);
-    cpu.memory.write_memory(0x8816, color);
-    cpu.memory.write_memory(0x8817, 0x00);
-    cpu.memory.write_memory(0x8818, color);
-    cpu.memory.write_memory(0x8819, 0x00);
-    cpu.memory.write_memory(0x881A, color);
-    cpu.memory.write_memory(0x881B, 0x00);
-    cpu.memory.write_memory(0x881C, color);
-    cpu.memory.write_memory(0x881D, 0x00);
-    cpu.memory.write_memory(0x881E, color);
-    cpu.memory.write_memory(0x881F, 0x00);
-    //-----------------------------------------------
-
-
-    cpu.memory.write_memory(0x7FF0, 0xC3);
-    cpu.memory.write_memory(0x7FF1, 0x00);
-    cpu.memory.write_memory(0x7FF2, 0x00);
-
-    // TEST SPRİTE/OBJECT
-
-    // OBJE KONUM HATALI
-
-    cpu.memory.write_memory(0xFE00, 0x10);
-    cpu.memory.write_memory(0xFE01, 0x10);
-    cpu.memory.write_memory(0xFE02, 129);
-    // -----------------------------------------------
-
-
-
-    for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 128);
-    }
     
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -88,11 +47,10 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
-        //thread::sleep(time::Duration::from_millis(100));
+        //thread::sleep(time::Duration::from_micros(100));
         cpu.memory.ppu.tick();
-        //thread::sleep(time::Duration::from_millis(100));
 
-        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
         /*     
         for x in 0..144 {
             for y in 0..160 {
@@ -107,7 +65,6 @@ fn main() {
             println!();
         }
         */
-        println!("tile data: {:?}", cpu.memory.ppu.tile_data);
         if x == 35112{
             //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
             //cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
