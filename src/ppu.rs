@@ -50,8 +50,9 @@ pub struct PPU {
     fetcher_x: u8,
     sprite_buffer: Vec<(u8, u8, u8, u8)>,
     tile_number: u8,
-
-
+    tile_data: u16,
+    fifo_push: bool,
+    fetcher_cycle: u8,
 
 }
 
@@ -107,7 +108,10 @@ impl PPU {
             fetcher_x: 0,
             sprite_buffer: Vec::new(),
             tile_number: 0,
-
+            tile_data: 0,
+            fifo_push: true,
+            fetcher_cycle: 0,
+            
         }
     }
 
@@ -148,7 +152,45 @@ impl PPU {
             Ppumode::VRAM => {
                 if self.fetcher_x >= 160 {
                     self.ppu_mode = Ppumode::HBlank;
+                    self.fetcher_x = 0;
                 }
+
+                if self.fetch_mode == Fetchmode::Background {
+                    if self.sprite_buffer.len() > 0 && (self.sprite_buffer[0].1 as u16) - 8 == self.fetcher_x as u16 {
+                        self.fetch_mode = Fetchmode::Sprite;
+                        self.fifo_push = true;
+                        self.fetcher_cycle = 0;
+                    }
+                }
+
+                match self.fetch_mode {
+                    Fetchmode::Background => {
+                        match self.fetcher_cycle {
+                            0 => {
+                                self.get_tile();
+                            },
+                            5 => {
+                                self.get_tile_data(self.tile_number);
+                            },
+                            _ => {}
+                        }
+                        self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
+
+                        self.push_to_background_fifo();
+                    }
+                    Fetchmode::Sprite => {
+                        self.get_tile();
+                        self.get_tile_data(self.tile_number);
+                        self.sprite_background_mix();
+                    }
+                    Fetchmode::Window => {
+                        self.get_tile();
+                        self.get_tile_data(self.tile_number);
+                        self.push_to_background_fifo();
+                        self.print_to_screen();
+                    }
+                }
+                
             }
             Ppumode::HBlank => {
                 if self.cycle >= 456 {
@@ -207,8 +249,37 @@ impl PPU {
         }
     }
 
-    fn get_tile_data(&self, tile_number: u8){
+    fn get_tile_data(&mut self, tile_number: u8){
+        match self.fetch_mode {
+            Fetchmode::Background => {
+                let tile_data_offset = match self.lcd_control.bg_window_tile_data {
+                    true => {
+                        // 0x8000 - 0x8FFF
+                        0x8000
+                    }
+                    false => {
+                        // 0x8800 - 0x97FF
+                        0x8800
+                    }
+                };
+                let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + (2 * ((self.ly + self.scy) as usize % 8));
+                let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
+                let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
+                let mut tile_data: u16 = 0;
+                for i in 0..8 {
+                    let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
+                    tile_data |= bit << (i * 2);
+                }
+                self.tile_data = tile_data;
 
+            },
+            Fetchmode::Sprite => {
+                todo!();
+            },
+            Fetchmode::Window => {
+                todo!();
+            }
+        }
     }
 
     fn push_to_background_fifo(&mut self) {

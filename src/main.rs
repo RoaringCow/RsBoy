@@ -23,9 +23,9 @@ fn main() {
 
     // last developed
     // on linux
-    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
+    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
     // on Mac
-    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
+    //let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
     
     let mut window = Window::new(
@@ -107,6 +107,18 @@ mod tests {
         cpu.memory.ppu.tick();
     }
     */
+    #[test]
+    fn test_tile_data_merge() {
+    
+        let tile_data_low: u16 = 0b01010101;
+        let tile_data_high: u16 = 0b10101010;
+        let mut tile_data: u16 = 0;
+        for i in 0..8 {
+            let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
+            tile_data |= bit << (i * 2);
+        }
+        assert_eq!(tile_data, 0b1001100110011001);
+    }
     #[test]
     fn test_load() {
         let mut cpu = cpu::CPU::new(ADDRESS);
