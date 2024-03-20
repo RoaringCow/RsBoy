@@ -15,11 +15,10 @@ pub struct PPU {
     ppu_mode: Ppumode,
     fetch_mode: Fetchmode,
     cycle: u16,
-    scanline: u16,
 
     // 0xFF40 LCDC
     lcd_control: LcdControl,
-    
+
     // 0xFF44 LY
     ly: u8,
 
@@ -48,7 +47,11 @@ pub struct PPU {
     // 0xFF49 OBP1
     obp1: Pallette,
 
-    
+    fetcher_x: u8,
+    sprite_buffer: Vec<(u8, u8, u8, u8)>,
+    tile_number: u8,
+
+
 
 }
 
@@ -63,7 +66,6 @@ impl PPU {
             vram: [0; 0x2000],
             oam: [0; 0xA0],
             cycle: 0,
-            scanline: 0,
             ppu_mode: Ppumode::OAM,
             fetch_mode: Fetchmode::Background,
             lcd_control: LcdControl{
@@ -76,7 +78,7 @@ impl PPU {
                 sprite_enable: false,
                 bg_enable: false,
             },
-            ly: 0,
+            ly: 0, // scanline
             lyc: 0,
             stat: 0,
             scy: 0,
@@ -101,52 +103,112 @@ impl PPU {
                 color2: 0b10,
                 color3: 0b11,
             },
+
+            fetcher_x: 0,
+            sprite_buffer: Vec::new(),
+            tile_number: 0,
+
         }
     }
 
 
     pub fn tick(&mut self) {
+        if !self.lcd_control.lcd_enable {
+            return;
+        }
+
+
         match self.ppu_mode {
             Ppumode::OAM => {
                 if self.cycle >= 80 {
                     self.ppu_mode = Ppumode::VRAM;
-                    self.cycle = 0;
+                }
+
+                if self.cycle % 2 == 0 {
+                    let sprite_number = self.cycle / 2;
+
+
+                    let sprite_y = self.oam[sprite_number as usize * 4];
+                    let sprite_x = self.oam[sprite_number as usize * 4 + 1];
+                    let tile_number = self.oam[sprite_number as usize * 4 + 2];
+                    let flags = self.oam[sprite_number as usize * 4 + 3];
+
+            // ------------- sprite conditions ----------------
+                    //Sprite X-Position must be greater than 0
+                    //LY + 16 must be greater than or equal to Sprite Y-Position
+                    //LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
+                    //The amount of sprites already stored in the OAM Buffer must be less than 10
+            // ------------------------------------------------
+
+                    if sprite_x >0 && self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
+                        self.sprite_buffer.push((sprite_y, sprite_x, tile_number, flags));
+                    }
                 }
             }
             Ppumode::VRAM => {
-                if self.>= 172 {
+                if self.fetcher_x >= 160 {
                     self.ppu_mode = Ppumode::HBlank;
-                    self.cycle = 0;
                 }
             }
             Ppumode::HBlank => {
-                if self.cycle >= 204 {
+                if self.cycle >= 456 {
                     self.cycle = 0;
-                    self.scanline += 1;
-                    if self.scanline == 143 {
+                    self.ly += 1;
+                    self.ppu_mode = Ppumode::OAM;
+                    if self.ly == 144 {
                         self.ppu_mode = Ppumode::VBlank;
-                    } else {
-                        self.ppu_mode = Ppumode::OAM;
                     }
                 }
             }
             Ppumode::VBlank => {
-                if self.cycle >= 456 {
-                    self.cycle = 0;
-                    self.scanline += 1;
-                    if self.scanline > 153 {
-                        self.scanline = 0;
-                        self.ppu_mode = Ppumode::OAM;
+            }
+        }
+
+
+        self.cycle += 1;
+    }
+
+    fn get_tile(&mut self){
+        // these informations were taken from https://hacktix.github.io/GBEDG/ppu/
+        match self.fetch_mode {
+            Fetchmode::Background => {
+                let tilemap_offset = match self.lcd_control.bg_tile_map {
+                    true => {
+                        // 0x9C00 - 0x9FFF
+                        0x9C00
                     }
-                }
+                    false => {
+                        // 0x9800 - 0x9BFF
+                        0x9800
+                    }
+                };
+                let tile_number_address = (self.scx / 8) & 0x1F + ((self.ly + self.scy) / 8) * 32;
+                self.tile_number = self.vram[tilemap_offset as usize + tile_number_address as usize];
+            }
+            Fetchmode::Sprite => {
+                let tilemap_offset = 0x8000;
+                todo!();
+
+            }
+            Fetchmode::Window => {
+                let tilemap_offset = match self.lcd_control.window_tile_map {
+                    true => {
+                        // 0x9C00 - 0x9FFF
+                        0x9C00
+                    }
+                    false => {
+                        // 0x9800 - 0x9BFF
+                        0x9800
+                    }
+                };
+                todo!();
+
             }
         }
     }
 
-    fn get_tile(&mut self){
-    }
-
     fn get_tile_data(&self, tile_number: u8){
+
     }
 
     fn push_to_background_fifo(&mut self) {
@@ -172,7 +234,7 @@ pub enum Ppumode {
 pub enum Fetchmode {
     Background,
     Sprite,
-    //Window,
+    Window,
 }
 
 #[derive(Debug)]

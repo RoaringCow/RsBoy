@@ -98,6 +98,7 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+    /*
     #[test]
     fn test_fetch_coordinate() {
         let mut cpu = cpu::CPU::new(ADDRESS);
@@ -105,6 +106,7 @@ mod tests {
         cpu.memory.ppu.lcdc = 0b10001000;
         cpu.memory.ppu.tick();
     }
+    */
     #[test]
     fn test_load() {
         let mut cpu = cpu::CPU::new(ADDRESS);

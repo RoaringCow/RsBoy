@@ -12,7 +12,7 @@ pub struct Memory {
 }
 impl Memory {
     pub fn reset(&mut self) {
-        self.ppu.reset();
+        //self.ppu.reset();
         self.wram = [0; 0x2000];
         self.io = [0; 0x80];
         self.hram = [0; 0x7F];
@@ -42,12 +42,6 @@ impl Memory {
             0xFF00..=0xFF7F => { // IO
                 match address {
                     
-                    0xFF40 => self.ppu.lcdc,
-                    0xFF41 => self.ppu.stat,
-                    0xFF42 => self.ppu.scy,
-                    0xFF43 => self.ppu.scx,
-                    0xFF44 => self.ppu.ly,
-                    0xFF45 => self.ppu.lyc,
 
                     // TODO implement the rest of the registers
                     _ => 0xFF
