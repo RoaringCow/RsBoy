@@ -13,11 +13,11 @@ pub struct PPU {
 
 
     ppu_mode: Ppumode,
-    fetch_mode: Fetchmode,
+    pub fetch_mode: Fetchmode,
     cycle: u16,
 
     // 0xFF40 LCDC
-    lcd_control: LcdControl,
+    pub lcd_control: LcdControl,
 
     // 0xFF44 LY
     ly: u8,
@@ -50,9 +50,10 @@ pub struct PPU {
     fetcher_x: u8,
     sprite_buffer: Vec<(u8, u8, u8, u8)>,
     tile_number: u8,
-    tile_data: u16,
+    pub tile_data: u16,
     fifo_push: bool,
     fetcher_cycle: u8,
+    pub background_fifo: Vec<u8>,
 
 }
 
@@ -111,7 +112,9 @@ impl PPU {
             tile_data: 0,
             fifo_push: true,
             fetcher_cycle: 0,
-            
+
+            background_fifo: Vec::new(),
+
         }
     }
 
@@ -126,26 +129,27 @@ impl PPU {
             Ppumode::OAM => {
                 if self.cycle >= 80 {
                     self.ppu_mode = Ppumode::VRAM;
-                }
+                } else {
 
-                if self.cycle % 2 == 0 {
-                    let sprite_number = self.cycle / 2;
+                    if self.cycle % 2 == 0 {
+                        let sprite_number = self.cycle / 2;
 
 
-                    let sprite_y = self.oam[sprite_number as usize * 4];
-                    let sprite_x = self.oam[sprite_number as usize * 4 + 1];
-                    let tile_number = self.oam[sprite_number as usize * 4 + 2];
-                    let flags = self.oam[sprite_number as usize * 4 + 3];
+                        let sprite_y = self.oam[sprite_number as usize * 4];
+                        let sprite_x = self.oam[sprite_number as usize * 4 + 1];
+                        let tile_number = self.oam[sprite_number as usize * 4 + 2];
+                        let flags = self.oam[sprite_number as usize * 4 + 3];
 
-            // ------------- sprite conditions ----------------
-                    //Sprite X-Position must be greater than 0
-                    //LY + 16 must be greater than or equal to Sprite Y-Position
-                    //LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
-                    //The amount of sprites already stored in the OAM Buffer must be less than 10
-            // ------------------------------------------------
+                        // ------------- sprite conditions ----------------
+                        //Sprite X-Position must be greater than 0
+                        //LY + 16 must be greater than or equal to Sprite Y-Position
+                        //LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
+                        //The amount of sprites already stored in the OAM Buffer must be less than 10
+                        // ------------------------------------------------
 
-                    if sprite_x >0 && self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
-                        self.sprite_buffer.push((sprite_y, sprite_x, tile_number, flags));
+                        if sprite_x >0 && self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
+                            self.sprite_buffer.push((sprite_y, sprite_x, tile_number, flags));
+                        }
                     }
                 }
             }
@@ -165,7 +169,7 @@ impl PPU {
 
                 match self.fetch_mode {
                     Fetchmode::Background => {
-                        match self.fetcher_cycle {
+                        match self.fetcher_cycle % 8 {
                             0 => {
                                 self.get_tile();
                             },
@@ -190,7 +194,7 @@ impl PPU {
                         self.print_to_screen();
                     }
                 }
-                
+
             }
             Ppumode::HBlank => {
                 if self.cycle >= 456 {
@@ -207,6 +211,7 @@ impl PPU {
         }
 
 
+        self.print_to_screen();
         self.cycle += 1;
     }
 
@@ -225,8 +230,9 @@ impl PPU {
                     }
                 };
                 let tile_number_address = (self.scx / 8) & 0x1F + ((self.ly + self.scy) / 8) * 32;
-                self.tile_number = self.vram[tilemap_offset as usize + tile_number_address as usize];
-            }
+                self.tile_number = self.vram[tilemap_offset as usize + tile_number_address as usize - 0x8000];
+                //println!("address {:x}", tilemap_offset as usize + tile_number_address as usize);
+            }, 
             Fetchmode::Sprite => {
                 let tilemap_offset = 0x8000;
                 todo!();
@@ -266,10 +272,12 @@ impl PPU {
                 let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
                 let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
                 let mut tile_data: u16 = 0;
+                println!("tile_data_low: {:b},  tile_data_high: {:b},  address: {:x}", tile_data_low, tile_data_high, tile_data_address);
                 for i in 0..8 {
                     let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
                     tile_data |= bit << (i * 2);
                 }
+                //println!("tile_data_address: {:x}", tile_data_address);
                 self.tile_data = tile_data;
 
             },
@@ -283,8 +291,37 @@ impl PPU {
     }
 
     fn push_to_background_fifo(&mut self) {
+        if self.background_fifo.len() > 8 {
+            return;
+        }
+        for i in 0..8 {
+            let color = (self.tile_data >> (i * 2)) & 0b11;
+            self.background_fifo.push(color as u8);
+        }
+        self.tile_data = 0;
+        //?
+        self.tile_number = 0;
+
     }
     fn print_to_screen(&mut self) {
+        if  !self.fifo_push || self.background_fifo.len() < 8 {
+            return;
+        }
+        let color = self.background_fifo.remove(0);
+        let color = match color {
+            0 => 0x000000,
+            1 => 0x555555,
+            2 => 0xAAAAAA,
+            3 => 0xFFFFFF,
+            _ => 0x000000,
+        };
+
+        // MIGHT NOT WORK
+        if self.fetcher_x < self.scx {
+            return;
+        }
+        self.buffer[(self.ly as usize * WIDTH) + (self.fetcher_x as usize)] = color;
+        self.fetcher_x += 1;
     }
     fn sprite_background_mix(&mut self) {
     }

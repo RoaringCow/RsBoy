@@ -14,7 +14,7 @@ use crate::ppu::Ppumode;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 2;
+const SCALE: usize = 5;
 
 #[allow(dead_code)]
 const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
@@ -42,33 +42,49 @@ fn main() {
     //window.limit_update_rate(Some(time::Duration::from_micros(1674)));
 
 
+
+
+
+    // test background
+
+    cpu.memory.ppu.lcd_control.bg_window_tile_data = true;
+    cpu.memory.write_memory(0x8000, 0b01010101);
+    cpu.memory.write_memory(0x8001, 0b01010101);
+    cpu.memory.write_memory(0x8002, 0b01010101);
+    cpu.memory.write_memory(0x8003, 0b01010101);
+    cpu.memory.write_memory(0x8004, 0b01010101);
+    cpu.memory.write_memory(0x8005, 0b01010101);
+    cpu.memory.write_memory(0x8006, 0b01010101);
+    cpu.memory.write_memory(0x8007, 0b01010101);
+    for x in 0x9800..0x9C00 {
+        cpu.memory.write_memory(x, 0x00);
+    }
+
+
+    // -----------------
+
     let mut x = 0;
     let mut now = time::Instant::now();
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
-        //thread::sleep(time::Duration::from_micros(100));
         cpu.memory.ppu.tick();
-
+        //println!("{:?}", cpu.memory.ppu.background_fifo);
         //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        /*     
-        for x in 0..144 {
-            for y in 0..160 {
-                match cpu.memory.ppu.buffer[x * 160 + y] {
-                    0x000000 => print!(" "),
-                    0x555555 => print!("."),
-                    0xAAAAAA => print!("x"),
-                    0xFFFFFF => print!("X"),
-                    _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
-                }
-            }
-            println!();
-        }
-        */
+        
         if x == 35112{
-            //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
-            //cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
-            window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+            for x in 0..144 {
+                for y in 0..160 {
+                    match cpu.memory.ppu.buffer[x * 160 + y] {
+                        0x000000 => print!(" "),
+                        0x555555 => print!("."),
+                        0xAAAAAA => print!("x"),
+                        0xFFFFFF => print!("X"),
+                        _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
+                    }
+                }
+                println!();
+            }    window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
             //let value = cpu.memory.read_memory(0xFE01);
             //cpu.memory.write_memory(0xFE01, value + 1);
             println!("display updated in: {:?}", now.elapsed());
