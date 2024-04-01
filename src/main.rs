@@ -23,9 +23,9 @@ fn main() {
 
     // last developed
     // on linux
-    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
+    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
     // on Mac
-    //let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
+    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
     
     let mut window = Window::new(
@@ -48,19 +48,101 @@ fn main() {
     // test background
 
     cpu.memory.ppu.lcd_control.bg_window_tile_data = true;
+    /*
     cpu.memory.write_memory(0x8000, 0b01010101);
-    cpu.memory.write_memory(0x8001, 0b01010101);
-    cpu.memory.write_memory(0x8002, 0b01010101);
-    cpu.memory.write_memory(0x8003, 0b01010101);
+    cpu.memory.write_memory(0x8002, 0b10101010);
     cpu.memory.write_memory(0x8004, 0b01010101);
-    cpu.memory.write_memory(0x8005, 0b01010101);
-    cpu.memory.write_memory(0x8006, 0b01010101);
-    cpu.memory.write_memory(0x8007, 0b01010101);
+    cpu.memory.write_memory(0x8006, 0b10101010);
+    cpu.memory.write_memory(0x8008, 0b01010101);
+    cpu.memory.write_memory(0x800A, 0b10101010);
+    cpu.memory.write_memory(0x800C, 0b01010101);
+    cpu.memory.write_memory(0x800E, 0b10101010);
+    */
+
+    // white
+    cpu.memory.write_memory(0x8000, 0b11111111);
+    cpu.memory.write_memory(0x8001, 0b11111111);
+    cpu.memory.write_memory(0x8002, 0b11111111);
+    cpu.memory.write_memory(0x8003, 0b11111111);
+    cpu.memory.write_memory(0x8004, 0b11111111);
+    cpu.memory.write_memory(0x8005, 0b11111111);
+    cpu.memory.write_memory(0x8006, 0b11111111);
+    cpu.memory.write_memory(0x8007, 0b11111111);
+    cpu.memory.write_memory(0x8008, 0b11111111);
+    cpu.memory.write_memory(0x8009, 0b11111111);
+    cpu.memory.write_memory(0x800A, 0b11111111);
+    cpu.memory.write_memory(0x800B, 0b11111111);
+    cpu.memory.write_memory(0x800C, 0b11111111);
+    cpu.memory.write_memory(0x800D, 0b11111111);
+    cpu.memory.write_memory(0x800E, 0b11111111);
+    cpu.memory.write_memory(0x800F, 0b11111111);
+    
+    // little less white
+    
+    cpu.memory.write_memory(0x8010, 0b00000000);
+    cpu.memory.write_memory(0x8011, 0b11111111);
+    cpu.memory.write_memory(0x8012, 0b00000000);
+    cpu.memory.write_memory(0x8013, 0b11111111);
+    cpu.memory.write_memory(0x8014, 0b00000000);
+    cpu.memory.write_memory(0x8015, 0b11111111);
+    cpu.memory.write_memory(0x8016, 0b00000000);
+    cpu.memory.write_memory(0x8017, 0b11111111);
+    cpu.memory.write_memory(0x8018, 0b00000000);
+    cpu.memory.write_memory(0x8019, 0b11111111);
+    cpu.memory.write_memory(0x801A, 0b00000000);
+    cpu.memory.write_memory(0x801B, 0b11111111);
+    cpu.memory.write_memory(0x801C, 0b00000000);
+    cpu.memory.write_memory(0x801D, 0b11111111);
+    cpu.memory.write_memory(0x801E, 0b00000000);
+    cpu.memory.write_memory(0x801F, 0b11111111);
+
+
+    // a little less white
+
+    cpu.memory.write_memory(0x8020, 0b11111111);
+    cpu.memory.write_memory(0x8021, 0b00000000);
+    cpu.memory.write_memory(0x8022, 0b11111111);
+    cpu.memory.write_memory(0x8023, 0b00000000);
+    cpu.memory.write_memory(0x8024, 0b11111111);
+    cpu.memory.write_memory(0x8025, 0b00000000);
+    cpu.memory.write_memory(0x8026, 0b11111111);
+    cpu.memory.write_memory(0x8027, 0b00000000);
+    cpu.memory.write_memory(0x8028, 0b11111111);
+    cpu.memory.write_memory(0x8029, 0b00000000);
+    cpu.memory.write_memory(0x802A, 0b11111111);
+    cpu.memory.write_memory(0x802B, 0b00000000);
+    cpu.memory.write_memory(0x802C, 0b11111111);
+    cpu.memory.write_memory(0x802D, 0b00000000);
+    cpu.memory.write_memory(0x802E, 0b11111111);
+    cpu.memory.write_memory(0x802F, 0b00000000);
+
+
+    // black
+
+    cpu.memory.write_memory(0x8030, 0b00000000);
+    cpu.memory.write_memory(0x8031, 0b00000000);
+    cpu.memory.write_memory(0x8032, 0b00000000);
+    cpu.memory.write_memory(0x8033, 0b00000000);
+    cpu.memory.write_memory(0x8034, 0b00000000);
+    cpu.memory.write_memory(0x8035, 0b00000000);
+    cpu.memory.write_memory(0x8036, 0b00000000);
+    cpu.memory.write_memory(0x8037, 0b00000000);
+    cpu.memory.write_memory(0x8038, 0b00000000);
+    cpu.memory.write_memory(0x8039, 0b00000000);
+    cpu.memory.write_memory(0x803A, 0b00000000);
+    cpu.memory.write_memory(0x803B, 0b00000000);
+    cpu.memory.write_memory(0x803C, 0b00000000);
+    cpu.memory.write_memory(0x803D, 0b00000000);
+    cpu.memory.write_memory(0x803E, 0b00000000);
+    cpu.memory.write_memory(0x803F, 0b00000000);
+
+
     for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 0x00);
+        cpu.memory.write_memory(x, (x%4) as u8);
     }
-
-
+    for x in 0x9800..0x9C00 {
+        println!("{:x}, {}", x, cpu.memory.read_memory(x));
+    }
     // -----------------
 
     let mut x = 0;
@@ -70,9 +152,9 @@ fn main() {
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
         //println!("{:?}", cpu.memory.ppu.background_fifo);
-        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        
+        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
         if x == 35112{
+            /* 
             for x in 0..144 {
                 for y in 0..160 {
                     match cpu.memory.ppu.buffer[x * 160 + y] {
@@ -84,7 +166,9 @@ fn main() {
                     }
                 }
                 println!();
-            }    window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+            }
+            */
+            window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
             //let value = cpu.memory.read_memory(0xFE01);
             //cpu.memory.write_memory(0xFE01, value + 1);
             println!("display updated in: {:?}", now.elapsed());

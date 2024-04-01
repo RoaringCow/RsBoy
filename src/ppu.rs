@@ -54,6 +54,7 @@ pub struct PPU {
     fifo_push: bool,
     fetcher_cycle: u8,
     pub background_fifo: Vec<u8>,
+    is_there_data: bool,
 
 }
 
@@ -112,6 +113,7 @@ impl PPU {
             tile_data: 0,
             fifo_push: true,
             fetcher_cycle: 0,
+            is_there_data: false,
 
             background_fifo: Vec::new(),
 
@@ -124,6 +126,7 @@ impl PPU {
             return;
         }
 
+        
 
         match self.ppu_mode {
             Ppumode::OAM => {
@@ -201,12 +204,28 @@ impl PPU {
                     self.cycle = 0;
                     self.ly += 1;
                     self.ppu_mode = Ppumode::OAM;
+                    //----- these are tests -----
+                    self.background_fifo.clear();
+                    self.fetcher_x = 0;
+                    self.fetch_mode = Fetchmode::Background;
+                    self.sprite_buffer.clear();
+                    self.fetcher_cycle = 0;
+                    //----------------------------
+                    
                     if self.ly == 144 {
                         self.ppu_mode = Ppumode::VBlank;
                     }
                 }
             }
             Ppumode::VBlank => {
+                if self.cycle >= 456 {
+                    self.cycle = 0;
+                    self.ly += 1;
+                    if self.ly == 154 {
+                        self.ly = 0;
+                        self.ppu_mode = Ppumode::OAM;
+                    }
+                }
             }
         }
 
@@ -229,9 +248,12 @@ impl PPU {
                         0x9800
                     }
                 };
-                let tile_number_address = (self.scx / 8) & 0x1F + ((self.ly + self.scy) / 8) * 32;
+                let tile_x = ((self.scx + self.fetcher_x) >> 3) & 0x1F;
+                let tile_y = self.ly.wrapping_add(self.scy) >> 3;
+                let tile_number_address = tile_y * 32 + tile_x;
                 self.tile_number = self.vram[tilemap_offset as usize + tile_number_address as usize - 0x8000];
-                //println!("address {:x}", tilemap_offset as usize + tile_number_address as usize);
+                println!("tile_x: {}, tile_y: {}", tile_x, tile_y);
+                println!("tile_number: {:x}   address:{:x}", self.tile_number, tile_number_address as usize + tilemap_offset as usize);
             }, 
             Fetchmode::Sprite => {
                 let tilemap_offset = 0x8000;
@@ -272,13 +294,14 @@ impl PPU {
                 let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
                 let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
                 let mut tile_data: u16 = 0;
-                println!("tile_data_low: {:b},  tile_data_high: {:b},  address: {:x}", tile_data_low, tile_data_high, tile_data_address);
+                //println!("tile_data_low: {:b},  tile_data_high: {:b},  address: {:x}", tile_data_low, tile_data_high, tile_data_address);
                 for i in 0..8 {
                     let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
                     tile_data |= bit << (i * 2);
                 }
                 //println!("tile_data_address: {:x}", tile_data_address);
                 self.tile_data = tile_data;
+                self.is_there_data = true;
 
             },
             Fetchmode::Sprite => {
@@ -291,13 +314,15 @@ impl PPU {
     }
 
     fn push_to_background_fifo(&mut self) {
-        if self.background_fifo.len() > 8 {
+        if self.background_fifo.len() > 8 || !self.is_there_data {
             return;
         }
         for i in 0..8 {
             let color = (self.tile_data >> (i * 2)) & 0b11;
             self.background_fifo.push(color as u8);
         }
+        //println!("background_fifo: {:?}", self.background_fifo);
+        self.is_there_data = false;
         self.tile_data = 0;
         //?
         self.tile_number = 0;
