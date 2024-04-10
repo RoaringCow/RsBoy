@@ -17,7 +17,10 @@ const HEIGHT: usize = 144;
 const SCALE: usize = 5;
 
 #[allow(dead_code)]
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+// on linux
+//const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+// on Mac
+const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
@@ -27,16 +30,16 @@ fn main() {
     // on Mac
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
-    
+
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH * SCALE,
         HEIGHT * SCALE,
         WindowOptions::default(),
-    )
-    .unwrap_or_else(|e| {
-        panic!("{}", e);
-    });
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
 
     window.limit_update_rate(Some(time::Duration::from_micros(16740)));
     //window.limit_update_rate(Some(time::Duration::from_micros(1674)));
@@ -49,15 +52,15 @@ fn main() {
 
     cpu.memory.ppu.lcd_control.bg_window_tile_data = true;
     /*
-    cpu.memory.write_memory(0x8000, 0b01010101);
-    cpu.memory.write_memory(0x8002, 0b10101010);
-    cpu.memory.write_memory(0x8004, 0b01010101);
-    cpu.memory.write_memory(0x8006, 0b10101010);
-    cpu.memory.write_memory(0x8008, 0b01010101);
-    cpu.memory.write_memory(0x800A, 0b10101010);
-    cpu.memory.write_memory(0x800C, 0b01010101);
-    cpu.memory.write_memory(0x800E, 0b10101010);
-    */
+       cpu.memory.write_memory(0x8000, 0b01010101);
+       cpu.memory.write_memory(0x8002, 0b10101010);
+       cpu.memory.write_memory(0x8004, 0b01010101);
+       cpu.memory.write_memory(0x8006, 0b10101010);
+       cpu.memory.write_memory(0x8008, 0b01010101);
+       cpu.memory.write_memory(0x800A, 0b10101010);
+       cpu.memory.write_memory(0x800C, 0b01010101);
+       cpu.memory.write_memory(0x800E, 0b10101010);
+       */
 
     // white
     cpu.memory.write_memory(0x8000, 0b11111111);
@@ -76,9 +79,9 @@ fn main() {
     cpu.memory.write_memory(0x800D, 0b11111111);
     cpu.memory.write_memory(0x800E, 0b11111111);
     cpu.memory.write_memory(0x800F, 0b11111111);
-    
+
     // little less white
-    
+
     cpu.memory.write_memory(0x8010, 0b00000000);
     cpu.memory.write_memory(0x8011, 0b11111111);
     cpu.memory.write_memory(0x8012, 0b00000000);
@@ -138,7 +141,7 @@ fn main() {
 
 
     for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, (x%4) as u8);
+        cpu.memory.write_memory(x, ((x+1) %4) as u8);
     }
     for x in 0x9800..0x9C00 {
         println!("{:x}, {}", x, cpu.memory.read_memory(x));
@@ -151,23 +154,23 @@ fn main() {
         cpu.run_instruction(cpu.fetch_instruction());
         cpu.memory.ppu.tick();
         cpu.memory.ppu.tick();
-        //println!("{:?}", cpu.memory.ppu.background_fifo);
-        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        if x == 35112{
-            /* 
-            for x in 0..144 {
-                for y in 0..160 {
-                    match cpu.memory.ppu.buffer[x * 160 + y] {
-                        0x000000 => print!(" "),
-                        0x555555 => print!("."),
-                        0xAAAAAA => print!("x"),
-                        0xFFFFFF => print!("X"),
-                        _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
-                    }
+        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+        /*
+        for x in 0..144 {
+            for y in 0..160 {
+                match cpu.memory.ppu.buffer[x * 160 + y] {
+                    0x000000 => print!(" "),
+                    0x555555 => print!("."),
+                    0xAAAAAA => print!("x"),
+                    0xFFFFFF => print!("X"),
+                    _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
                 }
-                println!();
             }
-            */
+            println!();
+        }
+        */
+        if x == 35112{
+            //println!("{}", cpu.memory.ppu.cycle);
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
             //let value = cpu.memory.read_memory(0xFE01);
             //cpu.memory.write_memory(0xFE01, value + 1);
@@ -180,7 +183,7 @@ fn main() {
 
         x += 1;
     }
-    
+
 
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
     cpu.memory.write_memory(0x9000, 0x31);
@@ -199,17 +202,33 @@ mod tests {
     use super::*;
 
     /*
+       #[test]
+       fn test_fetch_coordinate() {
+       let mut cpu = cpu::CPU::new(ADDRESS);
+       cpu.memory.write_memory(0x9C00, 0x01);
+       cpu.memory.ppu.lcdc = 0b10001000;
+       cpu.memory.ppu.tick();
+       }
+       */
+
     #[test]
-    fn test_fetch_coordinate() {
+    fn test_get_tile(){
         let mut cpu = cpu::CPU::new(ADDRESS);
-        cpu.memory.write_memory(0x9C00, 0x01);
-        cpu.memory.ppu.lcdc = 0b10001000;
-        cpu.memory.ppu.tick();
-    }
-    */
+        for x in 0x9800..0x9C00 {
+            cpu.memory.write_memory(x, (x - 0x9800) as u8);
+        }
+        for y in 0..144 {
+            cpu.memory.ppu.ly = y;
+            for k in 0..160 {
+                cpu.memory.ppu.fetcher_x = k;
+                println!("{} {}", 32* (y / 8), k);
+                assert_eq!(cpu.memory.ppu.get_tile(), 32 * (y / 8) + k / 8); 
+            }
+        }
+    } 
     #[test]
     fn test_tile_data_merge() {
-    
+
         let tile_data_low: u16 = 0b01010101;
         let tile_data_high: u16 = 0b10101010;
         let mut tile_data: u16 = 0;

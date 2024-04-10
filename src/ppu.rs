@@ -14,13 +14,13 @@ pub struct PPU {
 
     ppu_mode: Ppumode,
     pub fetch_mode: Fetchmode,
-    cycle: u16,
+    pub cycle: u16,
 
     // 0xFF40 LCDC
     pub lcd_control: LcdControl,
 
     // 0xFF44 LY
-    ly: u8,
+    pub ly: u8,
 
     // 0xFF45 LYC
     lyc: u8,
@@ -47,9 +47,9 @@ pub struct PPU {
     // 0xFF49 OBP1
     obp1: Pallette,
 
-    fetcher_x: u8,
+    pub fetcher_x: u8,
     sprite_buffer: Vec<(u8, u8, u8, u8)>,
-    tile_number: u8,
+    pub tile_number: u8,
     pub tile_data: u16,
     fifo_push: bool,
     fetcher_cycle: u8,
@@ -174,7 +174,7 @@ impl PPU {
                     Fetchmode::Background => {
                         match self.fetcher_cycle % 8 {
                             0 => {
-                                self.get_tile();
+                                self.tile_number = self.get_tile();
                             },
                             5 => {
                                 self.get_tile_data(self.tile_number);
@@ -224,6 +224,16 @@ impl PPU {
                     if self.ly == 154 {
                         self.ly = 0;
                         self.ppu_mode = Ppumode::OAM;
+                        self.background_fifo.clear();
+                        self.fetcher_x = 0;
+                        self.fetch_mode = Fetchmode::Background;
+                        self.sprite_buffer.clear();
+                        self.fetcher_cycle = 0;
+                        self.is_there_data = false;
+                        self.tile_data = 0;
+                        self.tile_number = 0;
+                        self.fifo_push = true;
+                        self.sprite_buffer.clear();
                     }
                 }
             }
@@ -234,7 +244,7 @@ impl PPU {
         self.cycle += 1;
     }
 
-    fn get_tile(&mut self){
+    pub fn get_tile(&mut self) -> u8{
         // these informations were taken from https://hacktix.github.io/GBEDG/ppu/
         match self.fetch_mode {
             Fetchmode::Background => {
@@ -248,12 +258,8 @@ impl PPU {
                         0x9800
                     }
                 };
-                let tile_x = ((self.scx + self.fetcher_x) >> 3) & 0x1F;
-                let tile_y = self.ly.wrapping_add(self.scy) >> 3;
-                let tile_number_address = tile_y * 32 + tile_x;
-                self.tile_number = self.vram[tilemap_offset as usize + tile_number_address as usize - 0x8000];
-                println!("tile_x: {}, tile_y: {}", tile_x, tile_y);
-                println!("tile_number: {:x}   address:{:x}", self.tile_number, tile_number_address as usize + tilemap_offset as usize);
+                let tile_number_address = 32 * ((self.ly + self.scy)  / 8) + (((self.scx + self.fetcher_x) / 8) & 0x1F);
+                return self.vram[tilemap_offset as usize + tile_number_address as usize - 0x8000];
             }, 
             Fetchmode::Sprite => {
                 let tilemap_offset = 0x8000;
@@ -294,12 +300,10 @@ impl PPU {
                 let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
                 let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
                 let mut tile_data: u16 = 0;
-                //println!("tile_data_low: {:b},  tile_data_high: {:b},  address: {:x}", tile_data_low, tile_data_high, tile_data_address);
                 for i in 0..8 {
                     let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
                     tile_data |= bit << (i * 2);
                 }
-                //println!("tile_data_address: {:x}", tile_data_address);
                 self.tile_data = tile_data;
                 self.is_there_data = true;
 
@@ -314,7 +318,7 @@ impl PPU {
     }
 
     fn push_to_background_fifo(&mut self) {
-        if self.background_fifo.len() > 8 || !self.is_there_data {
+        if self.background_fifo.len() > 8 && !self.is_there_data {
             return;
         }
         for i in 0..8 {
@@ -332,8 +336,8 @@ impl PPU {
         if  !self.fifo_push || self.background_fifo.len() < 8 {
             return;
         }
-        let color = self.background_fifo.remove(0);
-        let color = match color {
+        let color_code = self.background_fifo.remove(0);
+        let color = match color_code {
             0 => 0x000000,
             1 => 0x555555,
             2 => 0xAAAAAA,
@@ -343,6 +347,7 @@ impl PPU {
 
         // MIGHT NOT WORK
         if self.fetcher_x < self.scx {
+            self.fetcher_x += 1;
             return;
         }
         self.buffer[(self.ly as usize * WIDTH) + (self.fetcher_x as usize)] = color;
