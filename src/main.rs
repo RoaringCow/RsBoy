@@ -10,11 +10,10 @@ use std::fs::File;
 use std::io::{self, Read};
 
 use std::{thread, time};
-use crate::ppu::Ppumode;
 
-const WIDTH: usize = 160;
-const HEIGHT: usize = 144;
-const SCALE: usize = 5;
+const WIDTH: usize = 256;
+const HEIGHT: usize = 256;
+const SCALE: usize = 3;
 
 #[allow(dead_code)]
 // on linux
@@ -50,7 +49,6 @@ fn main() {
 
     // test background
 
-    cpu.memory.ppu.lcd_control.bg_window_tile_data = true;
     /*
        cpu.memory.write_memory(0x8000, 0b01010101);
        cpu.memory.write_memory(0x8002, 0b10101010);
@@ -150,33 +148,21 @@ fn main() {
 
     let mut x = 0;
     let mut now = time::Instant::now();
+
+    //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
-        cpu.memory.ppu.tick();
-        cpu.memory.ppu.tick();
-        //window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        /*
-        for x in 0..144 {
-            for y in 0..160 {
-                match cpu.memory.ppu.buffer[x * 160 + y] {
-                    0x000000 => print!(" "),
-                    0x555555 => print!("."),
-                    0xAAAAAA => print!("x"),
-                    0xFFFFFF => print!("X"),
-                    _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
-                }
-            }
-            println!();
-        }
-        */
         if x == 35112{
-            //println!("{}", cpu.memory.ppu.cycle);
+            cpu.memory.ppu.update_display();
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-            //let value = cpu.memory.read_memory(0xFE01);
-            //cpu.memory.write_memory(0xFE01, value + 1);
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
-
+            /*
+            for a in 0x9800..0x9C00 {
+                cpu.memory.write_memory(a, ((a+ test % 4) as u64 %4) as u8);
+            }
+            test += 1;
+            */
             x = 0;
         }
 
@@ -188,7 +174,6 @@ fn main() {
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
     cpu.memory.write_memory(0x9000, 0x31);
     cpu.memory.write_memory(0x9800, 0x00);   
-    cpu.memory.ppu.tick();
 }
 
 
@@ -211,21 +196,7 @@ mod tests {
        }
        */
 
-    #[test]
-    fn test_get_tile(){
-        let mut cpu = cpu::CPU::new(ADDRESS);
-        for x in 0x9800..0x9C00 {
-            cpu.memory.write_memory(x, (x - 0x9800) as u8);
-        }
-        for y in 0..144 {
-            cpu.memory.ppu.ly = y;
-            for k in 0..160 {
-                cpu.memory.ppu.fetcher_x = k;
-                println!("{} {}", 32* (y / 8), k);
-                assert_eq!(cpu.memory.ppu.get_tile(), 32 * (y / 8) + k / 8); 
-            }
-        }
-    } 
+
     #[test]
     fn test_tile_data_merge() {
 

@@ -94,7 +94,7 @@ impl CPU {
     // to make the compiler shut the fuck up
     #[allow(dead_code)]
     pub fn decode_register(&mut self, register: u8) -> &mut u8{
-        return match register {
+        match register {
             0b000 => &mut self.registers.b,
             0b001 => &mut self.registers.c,
             0b010 => &mut self.registers.d,
@@ -103,7 +103,7 @@ impl CPU {
             0b101 => &mut self.registers.l,
             0b111 => &mut self.registers.a,
             _ => {panic!("this register does not exist!")}
-        };
+        }
 
     }
 

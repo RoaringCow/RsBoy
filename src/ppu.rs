@@ -1,19 +1,23 @@
-use minifb::Scale;
-use std::{thread, time};
+// This version of ppu is not real world accurate.
+// An other branch was left unfinished that was planned to be accurate 
+// wasted so much time that i stopped(fuck you pixel fifo)
 
-const WIDTH: usize = 160;
-const HEIGHT: usize = 144;
+
+use minifb::Scale;
+use std::{iter::Enumerate, thread, time};
+
+const WIDTH: usize = 256;//160;
+const HEIGHT: usize = 256;//144;
 
 
 #[derive(Debug)]
 pub struct PPU {
     pub buffer: [u32; WIDTH * HEIGHT], // Change type to array
+    pub display: [u32; WIDTH * HEIGHT],
     pub vram: [u8; 0x2000], // Video RAM
     pub oam: [u8; 0xA0], // Object Attribute Memory
-
-
+    
     ppu_mode: Ppumode,
-    pub fetch_mode: Fetchmode,
     pub cycle: u16,
 
     // 0xFF40 LCDC
@@ -47,14 +51,6 @@ pub struct PPU {
     // 0xFF49 OBP1
     obp1: Pallette,
 
-    pub fetcher_x: u8,
-    sprite_buffer: Vec<(u8, u8, u8, u8)>,
-    pub tile_number: u8,
-    pub tile_data: u16,
-    fifo_push: bool,
-    fetcher_cycle: u8,
-    pub background_fifo: Vec<u8>,
-    is_there_data: bool,
 
 }
 
@@ -63,19 +59,20 @@ pub struct PPU {
 #[allow(dead_code)]
 impl PPU {
 
+
     pub fn new() -> Self {
         Self {
             buffer: [0; WIDTH * HEIGHT],
+            display: [0; WIDTH * HEIGHT],
             vram: [0; 0x2000],
             oam: [0; 0xA0],
             cycle: 0,
             ppu_mode: Ppumode::OAM,
-            fetch_mode: Fetchmode::Background,
             lcd_control: LcdControl{
                 lcd_enable: true,
                 window_tile_map: false,
                 window_enable: false,
-                bg_window_tile_data: false,
+                bg_window_tile_data: true,
                 bg_tile_map: false,
                 sprite_size: false,
                 sprite_enable: false,
@@ -106,186 +103,20 @@ impl PPU {
                 color2: 0b10,
                 color3: 0b11,
             },
-
-            fetcher_x: 0,
-            sprite_buffer: Vec::new(),
-            tile_number: 0,
-            tile_data: 0,
-            fifo_push: true,
-            fetcher_cycle: 0,
-            is_there_data: false,
-
-            background_fifo: Vec::new(),
-
         }
     }
+    
 
-
-    pub fn tick(&mut self) {
-        if !self.lcd_control.lcd_enable {
-            return;
-        }
-
-        
-
-        match self.ppu_mode {
-            Ppumode::OAM => {
-                if self.cycle >= 80 {
-                    self.ppu_mode = Ppumode::VRAM;
-                } else {
-
-                    if self.cycle % 2 == 0 {
-                        let sprite_number = self.cycle / 2;
-
-
-                        let sprite_y = self.oam[sprite_number as usize * 4];
-                        let sprite_x = self.oam[sprite_number as usize * 4 + 1];
-                        let tile_number = self.oam[sprite_number as usize * 4 + 2];
-                        let flags = self.oam[sprite_number as usize * 4 + 3];
-
-                        // ------------- sprite conditions ----------------
-                        //Sprite X-Position must be greater than 0
-                        //LY + 16 must be greater than or equal to Sprite Y-Position
-                        //LY + 16 must be less than Sprite Y-Position + Sprite Height (8 in Normal Mode, 16 in Tall-Sprite-Mode)
-                        //The amount of sprites already stored in the OAM Buffer must be less than 10
-                        // ------------------------------------------------
-
-                        if sprite_x >0 && self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + 8 && self.sprite_buffer.len() < 10 {
-                            self.sprite_buffer.push((sprite_y, sprite_x, tile_number, flags));
-                        }
-                    }
-                }
-            }
-            Ppumode::VRAM => {
-                if self.fetcher_x >= 160 {
-                    self.ppu_mode = Ppumode::HBlank;
-                    self.fetcher_x = 0;
-                }
-
-                if self.fetch_mode == Fetchmode::Background {
-                    if self.sprite_buffer.len() > 0 && (self.sprite_buffer[0].1 as u16) - 8 == self.fetcher_x as u16 {
-                        self.fetch_mode = Fetchmode::Sprite;
-                        self.fifo_push = true;
-                        self.fetcher_cycle = 0;
-                    }
-                }
-
-                match self.fetch_mode {
-                    Fetchmode::Background => {
-                        match self.fetcher_cycle % 8 {
-                            0 => {
-                                self.tile_number = self.get_tile();
-                            },
-                            5 => {
-                                self.get_tile_data(self.tile_number);
-                            },
-                            _ => {}
-                        }
-                        self.fetcher_cycle = self.fetcher_cycle.wrapping_add(1);
-
-                        self.push_to_background_fifo();
-                    }
-                    Fetchmode::Sprite => {
-                        self.get_tile();
-                        self.get_tile_data(self.tile_number);
-                        self.sprite_background_mix();
-                    }
-                    Fetchmode::Window => {
-                        self.get_tile();
-                        self.get_tile_data(self.tile_number);
-                        self.push_to_background_fifo();
-                        self.print_to_screen();
-                    }
-                }
-
-            }
-            Ppumode::HBlank => {
-                if self.cycle >= 456 {
-                    self.cycle = 0;
-                    self.ly += 1;
-                    self.ppu_mode = Ppumode::OAM;
-                    //----- these are tests -----
-                    self.background_fifo.clear();
-                    self.fetcher_x = 0;
-                    self.fetch_mode = Fetchmode::Background;
-                    self.sprite_buffer.clear();
-                    self.fetcher_cycle = 0;
-                    //----------------------------
-                    
-                    if self.ly == 144 {
-                        self.ppu_mode = Ppumode::VBlank;
-                    }
-                }
-            }
-            Ppumode::VBlank => {
-                if self.cycle >= 456 {
-                    self.cycle = 0;
-                    self.ly += 1;
-                    if self.ly == 154 {
-                        self.ly = 0;
-                        self.ppu_mode = Ppumode::OAM;
-                        self.background_fifo.clear();
-                        self.fetcher_x = 0;
-                        self.fetch_mode = Fetchmode::Background;
-                        self.sprite_buffer.clear();
-                        self.fetcher_cycle = 0;
-                        self.is_there_data = false;
-                        self.tile_data = 0;
-                        self.tile_number = 0;
-                        self.fifo_push = true;
-                        self.sprite_buffer.clear();
-                    }
-                }
-            }
-        }
-
-
-        self.print_to_screen();
-        self.cycle += 1;
-    }
-
-    pub fn get_tile(&mut self) -> u8{
-        // these informations were taken from https://hacktix.github.io/GBEDG/ppu/
-        match self.fetch_mode {
-            Fetchmode::Background => {
-                let tilemap_offset = match self.lcd_control.bg_tile_map {
-                    true => {
-                        // 0x9C00 - 0x9FFF
-                        0x9C00
-                    }
-                    false => {
-                        // 0x9800 - 0x9BFF
-                        0x9800
-                    }
-                };
-                let tile_number_address = 32 * ((self.ly + self.scy)  / 8) + (((self.scx + self.fetcher_x) / 8) & 0x1F);
-                return self.vram[tilemap_offset as usize + tile_number_address as usize - 0x8000];
-            }, 
-            Fetchmode::Sprite => {
-                let tilemap_offset = 0x8000;
-                todo!();
-
-            }
-            Fetchmode::Window => {
-                let tilemap_offset = match self.lcd_control.window_tile_map {
-                    true => {
-                        // 0x9C00 - 0x9FFF
-                        0x9C00
-                    }
-                    false => {
-                        // 0x9800 - 0x9BFF
-                        0x9800
-                    }
-                };
-                todo!();
-
-            }
-        }
-    }
-
-    fn get_tile_data(&mut self, tile_number: u8){
-        match self.fetch_mode {
-            Fetchmode::Background => {
+    pub fn update_display(&mut self) {
+        let background_tilemap_offset = match self.lcd_control.bg_tile_map {
+            true => 0x9C00,
+            false => 0x9800
+        };
+        // loop through all the tiles
+        for address in background_tilemap_offset..background_tilemap_offset + 1024{
+            let tilemap_number = address - background_tilemap_offset;
+            for y in 0..8 {
+                // Get a slice of the tile
                 let tile_data_offset = match self.lcd_control.bg_window_tile_data {
                     true => {
                         // 0x8000 - 0x8FFF
@@ -296,67 +127,32 @@ impl PPU {
                         0x8800
                     }
                 };
-                let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + (2 * ((self.ly + self.scy) as usize % 8));
+
+                //println!("address: {:x}", address);
+                let tile_number = self.vram[address as usize - 0x8000];
+                let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
                 let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
                 let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
-                let mut tile_data: u16 = 0;
-                for i in 0..8 {
-                    let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
-                    tile_data |= bit << (i * 2);
-                }
-                self.tile_data = tile_data;
-                self.is_there_data = true;
 
-            },
-            Fetchmode::Sprite => {
-                todo!();
-            },
-            Fetchmode::Window => {
-                todo!();
+
+                // number of tiles in a line / slice of tile width/ tile height 
+                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
+                let offset_x: usize = (tilemap_number % 32) as usize * 8;
+                for x in 0..8 {
+                    // map the color code to a value that minifb can use
+                    let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
+                        0 => 0x000000,
+                        1 => 0x555555,
+                        2 => 0xAAAAAA,
+                        3 => 0xFFFFFF,
+                        _ => 0x000000,
+                    };
+                    self.buffer[(y * 32 * 8) + x + offset_y + offset_x] = color;
+                }
             }
         }
-    }
-
-    fn push_to_background_fifo(&mut self) {
-        if self.background_fifo.len() > 8 && !self.is_there_data {
-            return;
-        }
-        for i in 0..8 {
-            let color = (self.tile_data >> (i * 2)) & 0b11;
-            self.background_fifo.push(color as u8);
-        }
-        //println!("background_fifo: {:?}", self.background_fifo);
-        self.is_there_data = false;
-        self.tile_data = 0;
-        //?
-        self.tile_number = 0;
 
     }
-    fn print_to_screen(&mut self) {
-        if  !self.fifo_push || self.background_fifo.len() < 8 {
-            return;
-        }
-        let color_code = self.background_fifo.remove(0);
-        let color = match color_code {
-            0 => 0x000000,
-            1 => 0x555555,
-            2 => 0xAAAAAA,
-            3 => 0xFFFFFF,
-            _ => 0x000000,
-        };
-
-        // MIGHT NOT WORK
-        if self.fetcher_x < self.scx {
-            self.fetcher_x += 1;
-            return;
-        }
-        self.buffer[(self.ly as usize * WIDTH) + (self.fetcher_x as usize)] = color;
-        self.fetcher_x += 1;
-    }
-    fn sprite_background_mix(&mut self) {
-    }
-
-
 }
 
 #[derive(Debug)]
@@ -367,13 +163,6 @@ pub enum Ppumode {
     VRAM,
 }
 
-
-#[derive(Debug, PartialEq)]
-pub enum Fetchmode {
-    Background,
-    Sprite,
-    Window,
-}
 
 #[derive(Debug)]
 pub struct LcdControl{

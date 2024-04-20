@@ -31,7 +31,7 @@ impl Memory {
     }
     pub fn read_memory(&self, address: u16) -> u8 {
        // print!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
-        let value = match address {
+        match address {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] as u8, // VRAM
             0xA000..=0xBFFF => 0xFF, // External RAM
@@ -54,9 +54,7 @@ impl Memory {
 
 
             // özel bir ram dosyası oluştur
-        };
-        //println!("    value: \x1b[38;2;255;0;0m{:X}\x1b[0m", value);
-        value
+        }
     }
 
     pub fn write_memory(&mut self, address: u16, value: u8) {
