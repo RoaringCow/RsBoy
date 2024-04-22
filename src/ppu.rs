@@ -1,5 +1,5 @@
 // This version of ppu is not real world accurate.
-// An other branch was left unfinished that was planned to be accurate 
+// An other branch was left unfinished that was planned to be accurate
 // wasted so much time that i stopped(fuck you pixel fifo)
 
 
@@ -16,7 +16,7 @@ pub struct PPU {
     pub display: [u32; WIDTH * HEIGHT],
     pub vram: [u8; 0x2000], // Video RAM
     pub oam: [u8; 0xA0], // Object Attribute Memory
-    
+
     ppu_mode: Ppumode,
     pub cycle: u16,
 
@@ -75,8 +75,8 @@ impl PPU {
                 bg_window_tile_data: true,
                 bg_tile_map: false,
                 sprite_size: false,
-                sprite_enable: false,
-                bg_enable: false,
+                sprite_enable: true,
+                bg_enable: true,
             },
             ly: 0, // scanline
             lyc: 0,
@@ -105,7 +105,7 @@ impl PPU {
             },
         }
     }
-    
+
 
     pub fn update_display(&mut self) {
 
@@ -117,7 +117,7 @@ impl PPU {
         // loop through all the tiles
         for address in background_tilemap_offset..background_tilemap_offset + 1024{
             let tilemap_number = address - background_tilemap_offset;
-            // number of tiles in a line / slice of tile width/ tile height 
+            // number of tiles in a line / slice of tile width/ tile height
             let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
             let offset_x: usize = (tilemap_number % 32) as usize * 8;
             for y in 0..8 {
@@ -157,6 +157,7 @@ impl PPU {
 
         // Sprite stuff
         //
+        //
         if self.lcd_control.sprite_enable {
             for sprite_number in 0..40 {
                 let sprite_y = self.oam[sprite_number as usize * 4];
@@ -172,46 +173,43 @@ impl PPU {
                 }
                 // if out of screen on y
                 let sprite_size = 8 + (8 * self.lcd_control.sprite_size as u8);
-                if sprite_y == sprite_size - 8 || sprite_y >= 160 { 
+                if sprite_y == sprite_size - 8 || sprite_y >= 160 {
                     break;
                 }
-                
-                let sprite_data: [[u32; 8]; 8] = [[0; 8]; 8];
-                
 
-                todo!("reversing sprites");
-                todo!("bütün sprite datasını al sonra çevir");
-
+                // Getting the sprite data
+                let mut sprite_data: [[u32; 8]; 8] = [[0; 8]; 8];
                 for y in 0..8 {
-                    // check if the current line is out of the screen
-                    if y + sprite_y >= 160 {
-                        break;
-                    }
-                    
-                    let sprite_data_address: usize = self.vram[tile_number as usize * 16 + 2 * y as usize] as usize;
-                    let sprite_low = self.vram[sprite_data_address];
-                    let sprite_high = self.vram[sprite_data_address + 1];
+                    // 0x8000 is not added because it will be subtracted otherwise
+                    let address = 16 * tile_number + y * 2;
+                    let data_low = self.vram[address as usize];
+                    let data_high = self.vram[address as usize + 1];
                     for x in 0..8 {
-                        // check if current x is out of screen
-                        if x + sprite_x >= 168 {
-                            break;
-                        }
-
-                        let color = match ((sprite_low >> (7 - x)) & 1) << 1 | ((sprite_high >> (7 - x)) & 1) {
+                        // map the color code to a value that minifb can use
+                        let color = match ((data_low >> (7 - x)) & 1) << 1 | ((data_high >> (7 - x)) & 1) {
                             0 => 0x000000,
                             1 => 0x555555,
                             2 => 0xAAAAAA,
                             3 => 0xFFFFFF,
                             _ => 0x000000,
                         };
-                        
-                        if flags >> 7 {
-                            
-                        }
-
-
+                        sprite_data[y as usize][x as usize] = 0xCCCCCC;
                     }
                 }
+
+
+                for y in 0..8 {
+                    if sprite_y + y >= 160 {break;}
+                    for x in 0..8 {
+                        if sprite_x + x >= 168 {break;}
+                        todo!("fix division by zero");
+                        let offset_y: usize = ((((sprite_y as usize - 16 + y as usize) % 144) + self.scy as usize) % 256) * 256;
+                        let offset_x: usize = ((sprite_x as usize - 8 + x as usize) % 160 + self.scx as usize) % 256;
+                        self.buffer[offset_y + offset_x];
+                        println!("offsets: {}   x: {},    y: {}", offset_y % offset_x, offset_x, offset_y / 256);
+                    }
+                }
+
 
             }
         }
