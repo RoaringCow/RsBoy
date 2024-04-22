@@ -108,6 +108,8 @@ impl PPU {
     
 
     pub fn update_display(&mut self) {
+
+        // Background stuff
         let background_tilemap_offset = match self.lcd_control.bg_tile_map {
             true => 0x9C00,
             false => 0x9800
@@ -115,6 +117,9 @@ impl PPU {
         // loop through all the tiles
         for address in background_tilemap_offset..background_tilemap_offset + 1024{
             let tilemap_number = address - background_tilemap_offset;
+            // number of tiles in a line / slice of tile width/ tile height 
+            let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
+            let offset_x: usize = (tilemap_number % 32) as usize * 8;
             for y in 0..8 {
                 // Get a slice of the tile
                 let tile_data_offset = match self.lcd_control.bg_window_tile_data {
@@ -135,9 +140,6 @@ impl PPU {
                 let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
 
 
-                // number of tiles in a line / slice of tile width/ tile height 
-                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
-                let offset_x: usize = (tilemap_number % 32) as usize * 8;
                 for x in 0..8 {
                     // map the color code to a value that minifb can use
                     let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
@@ -152,7 +154,69 @@ impl PPU {
             }
         }
 
+
+        // Sprite stuff
+        //
+        if self.lcd_control.sprite_enable {
+            for sprite_number in 0..40 {
+                let sprite_y = self.oam[sprite_number as usize * 4];
+                let sprite_x = self.oam[sprite_number as usize * 4 + 1];
+                let tile_number = self.oam[sprite_number as usize * 4 + 2];
+                let flags = self.oam[sprite_number as usize * 4 + 3];
+
+
+                // ---- Check if Sprite is on screen ------
+                // if out of screen on x
+                if sprite_x == 0 || sprite_x >= 168 {
+                    break;
+                }
+                // if out of screen on y
+                let sprite_size = 8 + (8 * self.lcd_control.sprite_size as u8);
+                if sprite_y == sprite_size - 8 || sprite_y >= 160 { 
+                    break;
+                }
+                
+                let sprite_data: [[u32; 8]; 8] = [[0; 8]; 8];
+                
+
+                todo!("reversing sprites");
+                todo!("bütün sprite datasını al sonra çevir");
+
+                for y in 0..8 {
+                    // check if the current line is out of the screen
+                    if y + sprite_y >= 160 {
+                        break;
+                    }
+                    
+                    let sprite_data_address: usize = self.vram[tile_number as usize * 16 + 2 * y as usize] as usize;
+                    let sprite_low = self.vram[sprite_data_address];
+                    let sprite_high = self.vram[sprite_data_address + 1];
+                    for x in 0..8 {
+                        // check if current x is out of screen
+                        if x + sprite_x >= 168 {
+                            break;
+                        }
+
+                        let color = match ((sprite_low >> (7 - x)) & 1) << 1 | ((sprite_high >> (7 - x)) & 1) {
+                            0 => 0x000000,
+                            1 => 0x555555,
+                            2 => 0xAAAAAA,
+                            3 => 0xFFFFFF,
+                            _ => 0x000000,
+                        };
+                        
+                        if flags >> 7 {
+                            
+                        }
+
+
+                    }
+                }
+
+            }
+        }
     }
+
 }
 
 #[derive(Debug)]
