@@ -27,7 +27,7 @@ fn main() {
     // on linux
     //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
     // on Mac
-    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
+    let mut cpu = cpu::CPU::new(ADDRESS);
 
 
     let mut window = Window::new(
@@ -145,6 +145,10 @@ fn main() {
         println!("{:x}, {}", x, cpu.memory.read_memory(x));
     }
     // -----------------
+
+    cpu.memory.ppu.oam[0] = 16;
+    cpu.memory.ppu.oam[1] = 40;
+    cpu.memory.ppu.oam[2] = 1;
 
     let mut x = 0;
     let mut now = time::Instant::now();

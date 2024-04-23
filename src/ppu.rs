@@ -202,11 +202,48 @@ impl PPU {
                     if sprite_y + y >= 160 {break;}
                     for x in 0..8 {
                         if sprite_x + x >= 168 {break;}
-                        todo!("fix division by zero");
-                        let offset_y: usize = ((((sprite_y as usize - 16 + y as usize) % 144) + self.scy as usize) % 256) * 256;
-                        let offset_x: usize = ((sprite_x as usize - 8 + x as usize) % 160 + self.scx as usize) % 256;
-                        self.buffer[offset_y + offset_x];
-                        println!("offsets: {}   x: {},    y: {}", offset_y % offset_x, offset_x, offset_y / 256);
+
+                        // division by zero errors...  shit
+                        let offset_y: usize = {
+                            //((sprite_y - 16 + y) % 144) + self.scy == 0
+                            let first_element = sprite_y - 16 + y;
+                            if first_element == 0 {
+                                if self.scy == 0 {
+                                    0
+                                }else {
+                                    self.scy as usize % 256
+                                }
+                            }else {
+                                if first_element == 144 && self.scy == 0 {
+                                    0
+                                }
+                                else {
+                                    ((first_element as usize % 144) + self.scy as usize) % 256
+                                }
+                            }
+                        } * 256; // well im not proud of this
+
+                        let offset_x: usize = {
+                            let first_element = sprite_x - 8 + x;
+
+                            if first_element == 0 {
+                                if self.scx == 0 {
+                                    0
+                                }else {
+                                    self.scx as usize % 256
+                                }
+                            }else {
+                                if first_element == 160 && self.scx == 0 {
+                                    0
+                                }
+                                else {
+                                    ((first_element as usize % 160) + self.scx as usize) % 256
+                                }
+                            }
+                        };
+                        todo!("Spriteı random yere atıyor");
+                        todo!("çalıştır görürsün");
+                        self.buffer[offset_y + offset_x] = sprite_data[y as usize][x as usize];
                     }
                 }
 
