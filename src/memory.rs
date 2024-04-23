@@ -12,7 +12,7 @@ pub struct Memory {
 }
 impl Memory {
     pub fn reset(&mut self) {
-        self.ppu.reset();
+        //self.ppu.reset();
         self.wram = [0; 0x2000];
         self.io = [0; 0x80];
         self.hram = [0; 0x7F];
@@ -31,7 +31,7 @@ impl Memory {
     }
     pub fn read_memory(&self, address: u16) -> u8 {
        // print!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
-        let value = match address {
+        match address {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] as u8, // VRAM
             0xA000..=0xBFFF => 0xFF, // External RAM
@@ -42,12 +42,6 @@ impl Memory {
             0xFF00..=0xFF7F => { // IO
                 match address {
                     
-                    0xFF40 => self.ppu.lcdc,
-                    0xFF41 => self.ppu.stat,
-                    0xFF42 => self.ppu.scy,
-                    0xFF43 => self.ppu.scx,
-                    0xFF44 => self.ppu.ly,
-                    0xFF45 => self.ppu.lyc,
 
                     // TODO implement the rest of the registers
                     _ => 0xFF
@@ -60,9 +54,7 @@ impl Memory {
 
 
             // özel bir ram dosyası oluştur
-        };
-        //println!("    value: \x1b[38;2;255;0;0m{:X}\x1b[0m", value);
-        value
+        }
     }
 
     pub fn write_memory(&mut self, address: u16, value: u8) {

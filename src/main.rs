@@ -10,14 +10,16 @@ use std::fs::File;
 use std::io::{self, Read};
 
 use std::{thread, time};
-use crate::ppu::Ppumode;
 
-const WIDTH: usize = 160;
-const HEIGHT: usize = 144;
-const SCALE: usize = 4;
+const WIDTH: usize = 256;
+const HEIGHT: usize = 256;
+const SCALE: usize = 3;
 
 #[allow(dead_code)]
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+// on linux
+//const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+// on Mac
+const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
@@ -27,108 +29,151 @@ fn main() {
     // on Mac
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
-    cpu.memory.write_memory(0x8080, 0x00);
 
-    //spite tile data
-    let color: u8= 0xFF;
-    cpu.memory.write_memory(0x8810, color);
-    cpu.memory.write_memory(0x8811, 0x00);
-    cpu.memory.write_memory(0x8812, color);
-    cpu.memory.write_memory(0x8813, 0x00);
-    cpu.memory.write_memory(0x8814, color);
-    cpu.memory.write_memory(0x8815, 0x00);
-    cpu.memory.write_memory(0x8816, color);
-    cpu.memory.write_memory(0x8817, 0x00);
-    cpu.memory.write_memory(0x8818, color);
-    cpu.memory.write_memory(0x8819, 0x00);
-    cpu.memory.write_memory(0x881A, color);
-    cpu.memory.write_memory(0x881B, 0x00);
-    cpu.memory.write_memory(0x881C, color);
-    cpu.memory.write_memory(0x881D, 0x00);
-    cpu.memory.write_memory(0x881E, color);
-    cpu.memory.write_memory(0x881F, 0x00);
-    //-----------------------------------------------
-
-
-    cpu.memory.write_memory(0x7FF0, 0xC3);
-    cpu.memory.write_memory(0x7FF1, 0x00);
-    cpu.memory.write_memory(0x7FF2, 0x00);
-
-    // TEST SPRİTE/OBJECT
-
-    // OBJE KONUM HATALI
-
-    cpu.memory.write_memory(0xFE00, 0x10);
-    cpu.memory.write_memory(0xFE01, 0x10);
-    cpu.memory.write_memory(0xFE02, 129);
-    // -----------------------------------------------
-
-
-
-    for x in 0x9800..0x9C00 {
-        cpu.memory.write_memory(x, 128);
-    }
-    
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH * SCALE,
         HEIGHT * SCALE,
         WindowOptions::default(),
-    )
-    .unwrap_or_else(|e| {
-        panic!("{}", e);
-    });
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
 
     window.limit_update_rate(Some(time::Duration::from_micros(16740)));
     //window.limit_update_rate(Some(time::Duration::from_micros(1674)));
 
 
+
+
+
+    // test background
+
+    /*
+       cpu.memory.write_memory(0x8000, 0b01010101);
+       cpu.memory.write_memory(0x8002, 0b10101010);
+       cpu.memory.write_memory(0x8004, 0b01010101);
+       cpu.memory.write_memory(0x8006, 0b10101010);
+       cpu.memory.write_memory(0x8008, 0b01010101);
+       cpu.memory.write_memory(0x800A, 0b10101010);
+       cpu.memory.write_memory(0x800C, 0b01010101);
+       cpu.memory.write_memory(0x800E, 0b10101010);
+       */
+
+    // white
+    cpu.memory.write_memory(0x8000, 0b11111111);
+    cpu.memory.write_memory(0x8001, 0b11111111);
+    cpu.memory.write_memory(0x8002, 0b11111111);
+    cpu.memory.write_memory(0x8003, 0b11111111);
+    cpu.memory.write_memory(0x8004, 0b11111111);
+    cpu.memory.write_memory(0x8005, 0b11111111);
+    cpu.memory.write_memory(0x8006, 0b11111111);
+    cpu.memory.write_memory(0x8007, 0b11111111);
+    cpu.memory.write_memory(0x8008, 0b11111111);
+    cpu.memory.write_memory(0x8009, 0b11111111);
+    cpu.memory.write_memory(0x800A, 0b11111111);
+    cpu.memory.write_memory(0x800B, 0b11111111);
+    cpu.memory.write_memory(0x800C, 0b11111111);
+    cpu.memory.write_memory(0x800D, 0b11111111);
+    cpu.memory.write_memory(0x800E, 0b11111111);
+    cpu.memory.write_memory(0x800F, 0b11111111);
+
+    // little less white
+
+    cpu.memory.write_memory(0x8010, 0b00000000);
+    cpu.memory.write_memory(0x8011, 0b11111111);
+    cpu.memory.write_memory(0x8012, 0b00000000);
+    cpu.memory.write_memory(0x8013, 0b11111111);
+    cpu.memory.write_memory(0x8014, 0b00000000);
+    cpu.memory.write_memory(0x8015, 0b11111111);
+    cpu.memory.write_memory(0x8016, 0b00000000);
+    cpu.memory.write_memory(0x8017, 0b11111111);
+    cpu.memory.write_memory(0x8018, 0b00000000);
+    cpu.memory.write_memory(0x8019, 0b11111111);
+    cpu.memory.write_memory(0x801A, 0b00000000);
+    cpu.memory.write_memory(0x801B, 0b11111111);
+    cpu.memory.write_memory(0x801C, 0b00000000);
+    cpu.memory.write_memory(0x801D, 0b11111111);
+    cpu.memory.write_memory(0x801E, 0b00000000);
+    cpu.memory.write_memory(0x801F, 0b11111111);
+
+
+    // a little less white
+
+    cpu.memory.write_memory(0x8020, 0b11111111);
+    cpu.memory.write_memory(0x8021, 0b00000000);
+    cpu.memory.write_memory(0x8022, 0b11111111);
+    cpu.memory.write_memory(0x8023, 0b00000000);
+    cpu.memory.write_memory(0x8024, 0b11111111);
+    cpu.memory.write_memory(0x8025, 0b00000000);
+    cpu.memory.write_memory(0x8026, 0b11111111);
+    cpu.memory.write_memory(0x8027, 0b00000000);
+    cpu.memory.write_memory(0x8028, 0b11111111);
+    cpu.memory.write_memory(0x8029, 0b00000000);
+    cpu.memory.write_memory(0x802A, 0b11111111);
+    cpu.memory.write_memory(0x802B, 0b00000000);
+    cpu.memory.write_memory(0x802C, 0b11111111);
+    cpu.memory.write_memory(0x802D, 0b00000000);
+    cpu.memory.write_memory(0x802E, 0b11111111);
+    cpu.memory.write_memory(0x802F, 0b00000000);
+
+
+    // black
+
+    cpu.memory.write_memory(0x8030, 0b00000000);
+    cpu.memory.write_memory(0x8031, 0b00000000);
+    cpu.memory.write_memory(0x8032, 0b00000000);
+    cpu.memory.write_memory(0x8033, 0b00000000);
+    cpu.memory.write_memory(0x8034, 0b00000000);
+    cpu.memory.write_memory(0x8035, 0b00000000);
+    cpu.memory.write_memory(0x8036, 0b00000000);
+    cpu.memory.write_memory(0x8037, 0b00000000);
+    cpu.memory.write_memory(0x8038, 0b00000000);
+    cpu.memory.write_memory(0x8039, 0b00000000);
+    cpu.memory.write_memory(0x803A, 0b00000000);
+    cpu.memory.write_memory(0x803B, 0b00000000);
+    cpu.memory.write_memory(0x803C, 0b00000000);
+    cpu.memory.write_memory(0x803D, 0b00000000);
+    cpu.memory.write_memory(0x803E, 0b00000000);
+    cpu.memory.write_memory(0x803F, 0b00000000);
+
+
+    for x in 0x9800..0x9C00 {
+        cpu.memory.write_memory(x, ((x+1) %4) as u8);
+    }
+    for x in 0x9800..0x9C00 {
+        println!("{:x}, {}", x, cpu.memory.read_memory(x));
+    }
+    // -----------------
+
     let mut x = 0;
     let mut now = time::Instant::now();
+
+    //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         cpu.run_instruction(cpu.fetch_instruction());
-        cpu.memory.ppu.tick();
-        //thread::sleep(time::Duration::from_millis(100));
-        cpu.memory.ppu.tick();
-        //thread::sleep(time::Duration::from_millis(100));
-
-        window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-        /*     
-        for x in 0..144 {
-            for y in 0..160 {
-                match cpu.memory.ppu.buffer[x * 160 + y] {
-                    0x000000 => print!(" "),
-                    0x555555 => print!("."),
-                    0xAAAAAA => print!("x"),
-                    0xFFFFFF => print!("X"),
-                    _ => print!("{:X}", cpu.memory.ppu.buffer[x * 160 + y]),
-                }
-            }
-            println!();
-        }
-        */
-        println!("tile data: {:?}", cpu.memory.ppu.tile_data);
         if x == 35112{
-            //cpu.memory.write_memory(0xFE00, cpu.memory.read_memory(0xFE00) + 1);
-            //cpu.memory.write_memory(0xFE01, cpu.memory.read_memory(0xFE01) + 1);
+            cpu.memory.ppu.update_display();
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
-            //let value = cpu.memory.read_memory(0xFE01);
-            //cpu.memory.write_memory(0xFE01, value + 1);
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
-
+            /*
+            for a in 0x9800..0x9C00 {
+                cpu.memory.write_memory(a, ((a+ test % 4) as u64 %4) as u8);
+            }
+            test += 1;
+            */
             x = 0;
         }
 
 
         x += 1;
     }
-    
+
 
     let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
     cpu.memory.write_memory(0x9000, 0x31);
     cpu.memory.write_memory(0x9800, 0x00);   
-    cpu.memory.ppu.tick();
 }
 
 
@@ -141,12 +186,28 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+    /*
+       #[test]
+       fn test_fetch_coordinate() {
+       let mut cpu = cpu::CPU::new(ADDRESS);
+       cpu.memory.write_memory(0x9C00, 0x01);
+       cpu.memory.ppu.lcdc = 0b10001000;
+       cpu.memory.ppu.tick();
+       }
+       */
+
+
     #[test]
-    fn test_fetch_coordinate() {
-        let mut cpu = cpu::CPU::new(ADDRESS);
-        cpu.memory.write_memory(0x9C00, 0x01);
-        cpu.memory.ppu.lcdc = 0b10001000;
-        cpu.memory.ppu.tick();
+    fn test_tile_data_merge() {
+
+        let tile_data_low: u16 = 0b01010101;
+        let tile_data_high: u16 = 0b10101010;
+        let mut tile_data: u16 = 0;
+        for i in 0..8 {
+            let bit = ((tile_data_low >> (7 - i)) & 1) << 1 | ((tile_data_high >> (7 - i)) & 1);
+            tile_data |= bit << (i * 2);
+        }
+        assert_eq!(tile_data, 0b1001100110011001);
     }
     #[test]
     fn test_load() {
