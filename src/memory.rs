@@ -65,7 +65,7 @@ impl Memory {
             0xA000..=0xBFFF => (), // External RAM
             0xC000..=0xCFFF => self.wram[address as usize - 0xC000] = value, // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000] = value, // Echo RAM
-            0xFE00..=0xFE9F => println!("sex"),//self.ppu.oam[address as usize - 0xFE00] = value,//self.gpu.read_oam(address), // OAM
+            0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00] = value,//self.gpu.read_oam(address), // OAM
             0xFEA0..=0xFEFF => (),// not usable
             0xFF00..=0xFF7F => self.io[address as usize - 0xFF00] = value,// IO
             0xFF80..=0xFFFE => self.hram[address as usize - 0xFF80] = value, // High RAM

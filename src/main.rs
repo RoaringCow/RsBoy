@@ -12,8 +12,8 @@ use std::io::{self, Read};
 use std::time::Duration;
 use std::{thread, time};
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 160;
+const HEIGHT: usize = 144;
 const SCALE: usize = 3;
 
 #[allow(dead_code)]
@@ -165,7 +165,10 @@ fn main() {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
         if x == 35112{
             cpu.memory.ppu.update_display();
-            window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
+            cpu.memory.ppu.write_to_display();
+            window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
+            cpu.memory.ppu.oam[0] += 1;
+            cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             /*

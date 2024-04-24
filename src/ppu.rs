@@ -6,13 +6,13 @@
 use minifb::Scale;
 use std::{iter::Enumerate, thread, time};
 
-const WIDTH: usize = 256;//160;
-const HEIGHT: usize = 256;//144;
+const WIDTH: usize = 160;
+const HEIGHT: usize = 144;
 
 
 #[derive(Debug)]
 pub struct PPU {
-    pub buffer: [u32; WIDTH * HEIGHT], // Change type to array
+    pub buffer: [u32; 256 * 256], // Change type to array
     pub display: [u32; WIDTH * HEIGHT],
     pub vram: [u8; 0x2000], // Video RAM
     pub oam: [u8; 0xA0], // Object Attribute Memory
@@ -62,7 +62,7 @@ impl PPU {
 
     pub fn new() -> Self {
         Self {
-            buffer: [0; WIDTH * HEIGHT],
+            buffer: [0; 256 * 256],
             display: [0; WIDTH * HEIGHT],
             vram: [0; 0x2000],
             oam: [0; 0xA0],
@@ -246,6 +246,15 @@ impl PPU {
                 }
 
 
+            }
+        }
+    }
+
+
+    pub fn write_to_display(&mut self) {
+        for y in 0..144 {
+            for x in 0..160 {
+                self.display[y * 160 + x] = self.buffer[y * 256 + x];
             }
         }
     }
