@@ -161,13 +161,7 @@ impl CPU {
 
 
     #[allow(dead_code)]
-    pub fn run_instruction(&mut self, opcode: u8) {
-        // TODO? I might make these individual functions that will get called
-        // from a hashmap but i dont think this part is going to affect the 
-        // overall performance. I will certainly do it if the performance is
-        // shit but if it isn't i won't bother. I dont know if hashmap would
-        // be faster.
-
+    pub fn run_instruction(&mut self, opcode: u8) -> u8{
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
@@ -1347,6 +1341,7 @@ impl CPU {
 
         };
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
+        cycles
 
     }
 

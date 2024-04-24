@@ -9,6 +9,7 @@ mod gameboy_io;
 use std::fs::File;
 use std::io::{self, Read};
 
+use std::time::Duration;
 use std::{thread, time};
 
 const WIDTH: usize = 256;
@@ -17,17 +18,17 @@ const SCALE: usize = 3;
 
 #[allow(dead_code)]
 // on linux
-//const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 // on Mac
-const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
+//const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
     // last developed
     // on linux
-    //let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
+    let mut cpu = cpu::CPU::new("/home/ersan/rs_boy/test_roms/emptyfortests.gb");
     // on Mac
-    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
+    //let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
 
 
     let mut window = Window::new(
@@ -146,12 +147,22 @@ fn main() {
     }
     // -----------------
 
+
+    // make cpu loop
+    cpu.memory.write_memory(0x0020, 0xC3);
+    cpu.memory.write_memory(0x0021, 0x00);
+    cpu.memory.write_memory(0x0022, 0x00);
+    // sprite data
+    cpu.memory.ppu.oam[0] = 0x10;
+    cpu.memory.ppu.oam[1] = 0x10;
+    cpu.memory.ppu.oam[2] = 0x02;
+
     let mut x = 0;
     let mut now = time::Instant::now();
 
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        cpu.run_instruction(cpu.fetch_instruction());
+        let _cycles = cpu.run_instruction(cpu.fetch_instruction());
         if x == 35112{
             cpu.memory.ppu.update_display();
             window.update_with_buffer(&cpu.memory.ppu.buffer, WIDTH, HEIGHT).unwrap();
@@ -169,11 +180,6 @@ fn main() {
 
         x += 1;
     }
-
-
-    let mut cpu = cpu::CPU::new("/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb");
-    cpu.memory.write_memory(0x9000, 0x31);
-    cpu.memory.write_memory(0x9800, 0x00);   
 }
 
 

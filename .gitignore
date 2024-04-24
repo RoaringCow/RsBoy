@@ -14,7 +14,7 @@ Cargo.lock
 *.pdb
 
 # Ignore all gameboy roms
-*.gb
+#*.gb
 
 # Added by cargo
 .idea/

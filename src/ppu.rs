@@ -241,8 +241,6 @@ impl PPU {
                                 }
                             }
                         };
-                        todo!("Spriteı random yere atıyor");
-                        todo!("çalıştır görürsün");
                         self.buffer[offset_y + offset_x] = sprite_data[y as usize][x as usize];
                     }
                 }
