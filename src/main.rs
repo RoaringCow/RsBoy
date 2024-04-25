@@ -14,7 +14,7 @@ use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 3;
+const SCALE: usize = 6;
 
 #[allow(dead_code)]
 // on linux
@@ -153,8 +153,8 @@ fn main() {
     cpu.memory.write_memory(0x0021, 0x00);
     cpu.memory.write_memory(0x0022, 0x00);
     // sprite data
-    cpu.memory.ppu.oam[0] = 0x10;
-    cpu.memory.ppu.oam[1] = 0x10;
+    cpu.memory.ppu.oam[0] = 0x0;
+    cpu.memory.ppu.oam[1] = 0x0;
     cpu.memory.ppu.oam[2] = 0x02;
 
     let mut x = 0;

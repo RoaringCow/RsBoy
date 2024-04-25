@@ -173,7 +173,7 @@ impl PPU {
                 }
                 // if out of screen on y
                 let sprite_size = 8 + (8 * self.lcd_control.sprite_size as u8);
-                if sprite_y == sprite_size - 8 || sprite_y >= 160 {
+                if sprite_y <= 16 - sprite_size || sprite_y >= 160 {
                     break;
                 }
 
@@ -197,31 +197,33 @@ impl PPU {
                     }
                 }
 
-
+                // printing sprite line by line
                 for y in 0..8 {
-                    if sprite_y + y >= 160 {break;}
+                    if sprite_y + y >= 160 || sprite_y + y < 16 {break;}
+
+                    // division by zero errors...  shit
+                    let offset_y: usize = {
+                        //((sprite_y - 16 + y) % 144) + self.scy == 0
+                        let first_element = sprite_y - 16 + y;
+                        if first_element == 0 {
+                            if self.scy == 0 {
+                                0
+                            }else {
+                                self.scy as usize % 256
+                            }
+                        }else {
+                            if first_element == 144 && self.scy == 0 {
+                                0
+                            }
+                            else {
+                                ((first_element as usize % 144) + self.scy as usize) % 256
+                            }
+                        }
+                    } * 256; // well im not proud of this
+                             //
                     for x in 0..8 {
                         if sprite_x + x >= 168 {break;}
 
-                        // division by zero errors...  shit
-                        let offset_y: usize = {
-                            //((sprite_y - 16 + y) % 144) + self.scy == 0
-                            let first_element = sprite_y - 16 + y;
-                            if first_element == 0 {
-                                if self.scy == 0 {
-                                    0
-                                }else {
-                                    self.scy as usize % 256
-                                }
-                            }else {
-                                if first_element == 144 && self.scy == 0 {
-                                    0
-                                }
-                                else {
-                                    ((first_element as usize % 144) + self.scy as usize) % 256
-                                }
-                            }
-                        } * 256; // well im not proud of this
 
                         let offset_x: usize = {
                             let first_element = sprite_x - 8 + x;
@@ -241,6 +243,7 @@ impl PPU {
                                 }
                             }
                         };
+                        println!("inner  y: {}  x: {}      sprite_y {}  scy {}  y {}", offset_y / 256, offset_x, sprite_y, self.scy, y);
                         self.buffer[offset_y + offset_x] = sprite_data[y as usize][x as usize];
                     }
                 }
