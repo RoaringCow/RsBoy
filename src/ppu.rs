@@ -193,7 +193,7 @@ impl PPU {
                             3 => 0xFFFFFF,
                             _ => 0x000000,
                         };
-                        sprite_data[y as usize][x as usize] = 0xCCCCCC;
+                        sprite_data[y as usize][x as usize] = color;
                     }
                 }
 
@@ -243,8 +243,18 @@ impl PPU {
                                 }
                             }
                         };
-                        println!("inner  y: {}  x: {}      sprite_y {}  scy {}  y {}", offset_y / 256, offset_x, sprite_y, self.scy, y);
-                        self.buffer[offset_y + offset_x] = sprite_data[y as usize][x as usize];
+
+                        // to support fliping
+                        let mut sprite_data_y = y;
+                        let mut sprite_data_x = x;
+                        if (flags >> 6) & 1 == 1{
+                            sprite_data_y = 7 - y;
+                            sprite_data_x = 7 - y;
+                        }
+                        let color_to_print = sprite_data[sprite_data_y as usize][sprite_data_x as usize];
+                        if !((flags >> 7 ) == 1 && self.buffer[offset_y + offset_x] != 0){
+                            self.buffer[offset_y + offset_x] = color_to_print; 
+                        }
                     }
                 }
 

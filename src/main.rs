@@ -139,6 +139,25 @@ fn main() {
     cpu.memory.write_memory(0x803F, 0b00000000);
 
 
+    // data for sprite
+    cpu.memory.write_memory(0x8040, 0b11111111);
+    cpu.memory.write_memory(0x8041, 0b00000000);
+    cpu.memory.write_memory(0x8043, 0b00000000);
+    cpu.memory.write_memory(0x8043, 0b00000000);
+    cpu.memory.write_memory(0x8044, 0b11111111);
+    cpu.memory.write_memory(0x8045, 0b00000000);
+    cpu.memory.write_memory(0x8045, 0b00000000);
+    cpu.memory.write_memory(0x8047, 0b00000000);
+    cpu.memory.write_memory(0x8048, 0b11111111);
+    cpu.memory.write_memory(0x8049, 0b00000000);
+    cpu.memory.write_memory(0x804B, 0b00000000);
+    cpu.memory.write_memory(0x804B, 0b00000000);
+    cpu.memory.write_memory(0x804C, 0b11111111);
+    cpu.memory.write_memory(0x804D, 0b00000000);
+    cpu.memory.write_memory(0x804B, 0b00000000);
+    cpu.memory.write_memory(0x804F, 0b00000000);
+
+
     for x in 0x9800..0x9C00 {
         cpu.memory.write_memory(x, ((x+1) %4) as u8);
     }
@@ -155,7 +174,8 @@ fn main() {
     // sprite data
     cpu.memory.ppu.oam[0] = 0x0;
     cpu.memory.ppu.oam[1] = 0x0;
-    cpu.memory.ppu.oam[2] = 0x02;
+    cpu.memory.ppu.oam[2] = 0x04;
+    cpu.memory.ppu.oam[3] = 0b01000000;
 
     let mut x = 0;
     let mut now = time::Instant::now();
