@@ -189,6 +189,8 @@ fn main() {
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
             cpu.memory.ppu.oam[0] += 1;
             cpu.memory.ppu.oam[1] += 1;
+            cpu.memory.ppu.wx += 1;
+            cpu.memory.ppu.wy += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             /*

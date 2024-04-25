@@ -39,9 +39,9 @@ pub struct PPU {
     scx: u8,
 
     //FF4A WY
-    wy: u8,
+    pub wy: u8,
     //FF4B WX
-    wx: u8,
+    pub wx: u8,
 
     // 0xFF47 BGP
     bgp: Pallette,
@@ -50,6 +50,10 @@ pub struct PPU {
     obp0: Pallette,
     // 0xFF49 OBP1
     obp1: Pallette,
+            
+
+    // to not reallocate everytime
+    window_data: [u32; 256 * 256], 
 
 
 }
@@ -103,6 +107,7 @@ impl PPU {
                 color2: 0b10,
                 color3: 0b11,
             },
+            window_data: [0; 256 * 256]
         }
     }
 
@@ -114,6 +119,16 @@ impl PPU {
             true => 0x9C00,
             false => 0x9800
         };
+        let tile_data_offset = match self.lcd_control.bg_window_tile_data {
+            true => {
+                // 0x8000 - 0x8FFF
+                0x8000
+            }
+            false => {
+                // 0x8800 - 0x97FF
+                0x8800
+            }
+        };
         // loop through all the tiles
         for address in background_tilemap_offset..background_tilemap_offset + 1024{
             let tilemap_number = address - background_tilemap_offset;
@@ -122,16 +137,6 @@ impl PPU {
             let offset_x: usize = (tilemap_number % 32) as usize * 8;
             for y in 0..8 {
                 // Get a slice of the tile
-                let tile_data_offset = match self.lcd_control.bg_window_tile_data {
-                    true => {
-                        // 0x8000 - 0x8FFF
-                        0x8000
-                    }
-                    false => {
-                        // 0x8800 - 0x97FF
-                        0x8800
-                    }
-                };
 
                 //println!("address: {:x}", address);
                 let tile_number = self.vram[address as usize - 0x8000];
@@ -152,8 +157,60 @@ impl PPU {
                     self.buffer[(y * 32 * 8) + x + offset_y + offset_x] = color;
                 }
             }
+        } 
+
+
+        // window stuff
+        if self.lcd_control.window_enable {
+            let window_tilemap_offset = match self.lcd_control.window_tile_map {
+                false => 0x9800,
+                true => 0x9C00
+            };
+            let tile_data_offset = match self.lcd_control.bg_window_tile_data {
+                true => {
+                    // 0x8000 - 0x8FFF
+                    0x8000
+                }
+                false => {
+                    // 0x8800 - 0x97FF
+                    0x8800
+                }
+            };
+            for address in window_tilemap_offset..window_tilemap_offset + 1024 {
+                let tilemap_number = address - window_tilemap_offset;
+
+                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
+                let offset_x: usize = (tilemap_number % 32) as usize * 8;
+                for y in 0..8 {
+                    let tile_number = self.vram[address as usize - 0x8000];
+                    let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
+                    let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
+                    let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
+
+                    for x in 0..8 {
+                    
+                        let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
+                            0 => 0x000000,
+                            1 => 0x555555,
+                            2 => 0xAAAAAA,
+                            3 => 0xFFFFFF,
+                            _ => 0x000000,
+                        };
+                        self.window_data[(y * 32 * 8) + x + offset_y + offset_x] = color;
+                    }
+                }
+
+            }
         }
 
+        // This is a really inefficent way but i guess doesnt matter that much
+        for y in 0..256 {
+            if self.wy as u16 + y as u16 >= 256 {break;}
+            for x in 0..256 {
+                if self.wx as u16 + x as u16 >= 256 {break;}
+                self.buffer[(self.wy as usize + y) * 256 + (x + self.wx as usize)] = self.window_data[(self.wy as usize + y) * 256 + (x + self.wx as usize)];
+            }
+        }
 
         // Sprite stuff
         //
