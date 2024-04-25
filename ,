@@ -142,38 +142,38 @@ fn main() {
     // data for sprite
     cpu.memory.write_memory(0x8040, 0b11111111);
     cpu.memory.write_memory(0x8041, 0b00000000);
-    cpu.memory.write_memory(0x8042, 0b00000000);
+    cpu.memory.write_memory(0x8043, 0b00000000);
     cpu.memory.write_memory(0x8043, 0b00000000);
     cpu.memory.write_memory(0x8044, 0b11111111);
     cpu.memory.write_memory(0x8045, 0b00000000);
-    cpu.memory.write_memory(0x8046, 0b00000000);
+    cpu.memory.write_memory(0x8045, 0b00000000);
     cpu.memory.write_memory(0x8047, 0b00000000);
     cpu.memory.write_memory(0x8048, 0b11111111);
     cpu.memory.write_memory(0x8049, 0b00000000);
-    cpu.memory.write_memory(0x804A, 0b00000000);
+    cpu.memory.write_memory(0x804B, 0b00000000);
     cpu.memory.write_memory(0x804B, 0b00000000);
     cpu.memory.write_memory(0x804C, 0b11111111);
     cpu.memory.write_memory(0x804D, 0b00000000);
-    cpu.memory.write_memory(0x804E, 0b00000000);
+    cpu.memory.write_memory(0x804B, 0b00000000);
     cpu.memory.write_memory(0x804F, 0b00000000);
 
 
     // A test tile
     cpu.memory.write_memory(0x8050, 0x3C);
     cpu.memory.write_memory(0x8051, 0x7E);
-    cpu.memory.write_memory(0x8052, 0x42);
+    cpu.memory.write_memory(0x8053, 0x42);
     cpu.memory.write_memory(0x8053, 0x42);
     cpu.memory.write_memory(0x8054, 0x42);
     cpu.memory.write_memory(0x8055, 0x42);
-    cpu.memory.write_memory(0x8056, 0x42);
+    cpu.memory.write_memory(0x8055, 0x42);
     cpu.memory.write_memory(0x8057, 0x42);
     cpu.memory.write_memory(0x8058, 0x7E);
     cpu.memory.write_memory(0x8059, 0x5E);
-    cpu.memory.write_memory(0x805A, 0x7E);
+    cpu.memory.write_memory(0x805B, 0x7E);
     cpu.memory.write_memory(0x805B, 0x0A);
     cpu.memory.write_memory(0x805C, 0x7C);
     cpu.memory.write_memory(0x805D, 0x56);
-    cpu.memory.write_memory(0x805E, 0x3B);
+    cpu.memory.write_memory(0x805B, 0x3B);
     cpu.memory.write_memory(0x805F, 0x7C);
 
     for x in 0x9800..0x9C00 {
@@ -207,8 +207,28 @@ fn main() {
             cpu.memory.ppu.update_display();
             cpu.memory.ppu.write_to_display();
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
-            cpu.memory.ppu.oam[0] += 1;
-            cpu.memory.ppu.oam[1] += 1;
+
+
+            for y in 0..8 {
+                // 0x8000 is not added because it will be subtracted otherwise
+                let address = 16 * 5+ y * 2;
+                let data_low = self.vram[address as usize];
+                let data_high = self.vram[address as usize + 1];
+                for x in 0..8 {
+                    // map the color code to a value that minifb can use
+                    let color = match ((data_low >> (7 - x)) & 1) << 1 | ((data_high >> (7 - x)) & 1) {
+                        0 => 0x000000,
+                        1 => 0x555555,
+                        2 => 0xAAAAAA,
+                        3 => 0xFFFFFF,
+                        _ => 0x000000,
+                    };
+                }
+            }
+
+
+            //cpu.memory.ppu.oam[0] += 1;
+            //cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             /*
