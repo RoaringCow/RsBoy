@@ -1,7 +1,6 @@
 use crate::registers::Register;
 use crate::ppu::PPU;
 use crate::memory::Memory;
-use crate::gameboy_io::IO;
 #[allow(dead_code)]
 
 /*

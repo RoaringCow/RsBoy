@@ -21,38 +21,41 @@ pub struct PPU {
     pub cycle: u16,
 
     // 0xFF40 LCDC
-    pub lcd_control: LcdControl,
+    pub lcd_control: u8,
 
+    // 0xFF41 STAT
+    pub stat: u8,
+
+    // 0xFF42 SCY
+    pub scy: u8,
+    
+    // 0xFF43 SCX
+    pub scx: u8,
+    
     // 0xFF44 LY
     pub ly: u8,
 
     // 0xFF45 LYC
-    lyc: u8,
+    pub lyc: u8,
 
-    // 0xFF41 STAT
-    stat: u8,
+    // 0xFF46 DMA
+    pub dma_address: u8,
 
-
-    // 0xFF42 SCY
-    scy: u8,
-    // 0xFF43 SCX
-    scx: u8,
+    // 0xFF47 BGP
+    pub bgp: Pallette,
+    // 0xFF48 OBP0
+    pub obp0: Pallette,
+    // 0xFF49 OBP1
+    pub obp1: Pallette,
 
     //FF4A WY
     pub wy: u8,
     //FF4B WX
     pub wx: u8,
 
-    // 0xFF47 BGP
-    bgp: Pallette,
-
-    // 0xFF48 OBP0
-    obp0: Pallette,
-    // 0xFF49 OBP1
-    obp1: Pallette,
             
 
-    // to not reallocate everytime
+    // to not reallocate every time
     window_data: [u32; 256 * 256], 
 
 
@@ -72,40 +75,42 @@ impl PPU {
             oam: [0; 0xA0],
             cycle: 0,
             ppu_mode: Ppumode::OAM,
-            lcd_control: LcdControl{
-                lcd_enable: true,
-                window_tile_map: false,
-                window_enable: false,
-                bg_window_tile_data: true,
-                bg_tile_map: false,
-                sprite_size: false,
-                sprite_enable: true,
-                bg_enable: true,
-            },
+            lcd_control: 0b10010011,
+                /*
+                lcd_enable,
+                window_tile_map,
+                window_enable,
+                bg_window_tile_data,
+                bg_tile_map,
+                sprite_size,
+                sprite_enable,
+                bg_enabletrue,
+            */
             ly: 0, // scanline
             lyc: 0,
+            dma_address: 0,
             stat: 0,
             scy: 0,
             scx: 0,
             wy: 0,
             wx: 0,
             bgp: Pallette{
-                color0: 0b00,
-                color1: 0b01,
-                color2: 0b10,
-                color3: 0b11,
+                color3: 0b00,
+                color2: 0b01,
+                color1: 0b10,
+                color0: 0b11,
             },
             obp0: Pallette{
-                color0: 0b00,
-                color1: 0b01,
-                color2: 0b10,
-                color3: 0b11,
+                color3: 0b00,
+                color2: 0b01,
+                color1: 0b10,
+                color0: 0b11,
             },
             obp1: Pallette{
-                color0: 0b00,
-                color1: 0b01,
-                color2: 0b10,
-                color3: 0b11,
+                color3: 0b00,
+                color2: 0b01,
+                color1: 0b10,
+                color0: 0b11,
             },
             window_data: [0; 256 * 256]
         }
@@ -115,19 +120,21 @@ impl PPU {
     pub fn update_display(&mut self) {
 
         // Background stuff
-        let background_tilemap_offset = match self.lcd_control.bg_tile_map {
-            true => 0x9C00,
-            false => 0x9800
+        let background_tilemap_offset = match (self.lcd_control >> 3) & 1 {
+            1 => 0x9C00,
+            0 => 0x9800,
+            _ => panic!("wtf?"),
         };
-        let tile_data_offset = match self.lcd_control.bg_window_tile_data {
-            true => {
+        let tile_data_offset = match (self.lcd_control >> 4) & 1{
+            1 => {
                 // 0x8000 - 0x8FFF
                 0x8000
-            }
-            false => {
+            },
+            0 => {
                 // 0x8800 - 0x97FF
                 0x8800
-            }
+            },
+            _ => panic!("wtf?"),
         };
         // loop through all the tiles
         for address in background_tilemap_offset..background_tilemap_offset + 1024{
@@ -161,20 +168,22 @@ impl PPU {
 
 
         // window stuff
-        if self.lcd_control.window_enable {
-            let window_tilemap_offset = match self.lcd_control.window_tile_map {
-                false => 0x9800,
-                true => 0x9C00
+        if (self.lcd_control >> 5) & 1 == 1{
+            let window_tilemap_offset = match (self.lcd_control >> 6) & 1{
+                0 => 0x9800,
+                1 => 0x9C00,
+                _ => panic!("wtf?"),
             };
-            let tile_data_offset = match self.lcd_control.bg_window_tile_data {
-                true => {
+            let tile_data_offset = match (self.lcd_control >> 4) & 1{
+                1 => {
                     // 0x8000 - 0x8FFF
                     0x8000
                 }
-                false => {
+                0 => {
                     // 0x8800 - 0x97FF
                     0x8800
                 }
+                _ => panic!("wtf?"),
             };
             for address in window_tilemap_offset..window_tilemap_offset + 1024 {
                 let tilemap_number = address - window_tilemap_offset;
@@ -215,7 +224,7 @@ impl PPU {
         // Sprite stuff
         //
         //
-        if self.lcd_control.sprite_enable {
+        if (self.lcd_control >> 1) & 1 == 1{
             for sprite_number in 0..40 {
                 let sprite_y = self.oam[sprite_number as usize * 4];
                 let sprite_x = self.oam[sprite_number as usize * 4 + 1];
@@ -229,7 +238,7 @@ impl PPU {
                     break;
                 }
                 // if out of screen on y
-                let sprite_size = 8 + (8 * self.lcd_control.sprite_size as u8);
+                let sprite_size = 8 + (8 * (self.lcd_control >> 2) & 1);
                 if sprite_y <= 16 - sprite_size || sprite_y >= 160 {
                     break;
                 }
@@ -339,7 +348,7 @@ pub enum Ppumode {
     VRAM,
 }
 
-
+/*
 #[derive(Debug)]
 pub struct LcdControl{
     pub lcd_enable: bool,
@@ -351,6 +360,8 @@ pub struct LcdControl{
     pub sprite_enable: bool,
     pub bg_enable: bool,
 }
+*/
+
 
 #[derive(Debug)]
 pub struct Pallette {

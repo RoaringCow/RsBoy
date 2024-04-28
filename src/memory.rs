@@ -6,7 +6,6 @@ pub struct Memory {
     pub rom: Cartridge, // rom
     pub ppu: PPU, // ppu
     wram: [u8; 0x2000], // work ram
-    io: [u8; 0x80], // io ports
     hram: [u8; 0x7F], // high ram
     ie: u8, // interrupt enable register
 }
@@ -14,7 +13,6 @@ impl Memory {
     pub fn reset(&mut self) {
         //self.ppu.reset();
         self.wram = [0; 0x2000];
-        self.io = [0; 0x80];
         self.hram = [0; 0x7F];
         self.ie = 0;
     }
@@ -23,7 +21,6 @@ impl Memory {
             rom: Cartridge::new(file),
             ppu: PPU::new(),
             wram: [0; 0x2000],
-            io: [0; 0x80],
             hram: [0; 0x7F],
             ie: 0,
         }
@@ -41,7 +38,39 @@ impl Memory {
             0xFEA0..=0xFEFF => 0,// not usable
             0xFF00..=0xFF7F => { // IO
                 match address {
-                    
+                    // ------------------------------------------------------
+                    //FF40 - FF4B lcd control, status, position .... registers
+                    0xFF40 => self.ppu.lcd_control,
+                    0xFF41 => self.ppu.stat,
+                    0xFF42 => self.ppu.scy,
+                    0xFF43 => self.ppu.scx,
+                    0xFF44 => self.ppu.ly,
+                    0xFF45 => self.ppu.lyc,
+                    0xFF46 => self.ppu.dma_address,
+                    0xFF47 => {
+                        (self.ppu.bgp.color3 << 6) |
+                        (self.ppu.bgp.color2 << 4) |
+                        (self.ppu.bgp.color1 << 2) |
+                        (self.ppu.bgp.color0)
+                    },
+                    0xFF48 => {
+                        (self.ppu.obp0.color3 << 6) |
+                        (self.ppu.obp0.color2 << 4) |
+                        (self.ppu.obp0.color1 << 2) |
+                        (self.ppu.obp0.color0)
+                    },
+                    0xFF49 => {
+                        (self.ppu.obp1.color3 << 6) |
+                        (self.ppu.obp1.color2 << 4) |
+                        (self.ppu.obp1.color1 << 2) |
+                        (self.ppu.obp1.color0)
+                    },
+                    0xFF4A => self.ppu.wy,
+                    0xFF4B => self.ppu.wx,
+                    // ------------------------------------------------------
+                    // ------------------------------------------------------
+
+
 
                     // TODO implement the rest of the registers
                     _ => 0xFF
@@ -52,8 +81,6 @@ impl Memory {
             #[allow(unreachable_patterns)]
             _ => panic!("address out of range"), // cant get here
 
-
-            // özel bir ram dosyası oluştur
         }
     }
 
@@ -67,13 +94,62 @@ impl Memory {
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000] = value, // Echo RAM
             0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00] = value,//self.gpu.read_oam(address), // OAM
             0xFEA0..=0xFEFF => (),// not usable
-            0xFF00..=0xFF7F => self.io[address as usize - 0xFF00] = value,// IO
+            0xFF00..=0xFF7F => {
+                match address {
+                    // ------------------------------------------------------
+                    //FF40 - FF4B lcd control, status, position .... registers
+                    0xFF40 => self.ppu.lcd_control = value,
+                    0xFF41 => self.ppu.stat = value,
+                    0xFF42 => self.ppu.scy = value,
+                    0xFF43 => self.ppu.scx = value,
+                    0xFF44 => self.ppu.ly = value,
+                    0xFF45 => self.ppu.lyc = value,
+                    0xFF46 => {
+                        self.ppu.dma_address = value;
+                        self.dma_transfer();
+                    }
+                    0xFF47 => {
+                        self.ppu.bgp.color3 = (value >> 6) & 0b11;
+                        self.ppu.bgp.color2 = (value >> 4) & 0b11;
+                        self.ppu.bgp.color1 = (value >> 2) & 0b11;
+                        self.ppu.bgp.color0 = value & 0b11;
+                    },
+                    0xFF48 => {
+                        self.ppu.obp0.color3 = (value >> 6) & 0b11;
+                        self.ppu.obp0.color2 = (value >> 4) & 0b11;
+                        self.ppu.obp0.color1 = (value >> 2) & 0b11;
+                        self.ppu.obp0.color0 = value & 0b11;
+                    },
+                    0xFF49 => {
+                        self.ppu.obp1.color3 = (value >> 6) & 0b11;
+                        self.ppu.obp1.color2 = (value >> 4) & 0b11;
+                        self.ppu.obp1.color1 = (value >> 2) & 0b11;
+                        self.ppu.obp1.color0 = value & 0b11;
+                    },
+                    0xFF4A => self.ppu.wy = value,
+                    0xFF4B => self.ppu.wx = value,
+                    // ------------------------------------------------------
+                    // ------------------------------------------------------
+                
+
+
+                    _ => (),
+                }
+            } ,
             0xFF80..=0xFFFE => self.hram[address as usize - 0xFF80] = value, // High RAM
             0xFFFF => self.ie = value, // Interrupt Enable Register
             _ => panic!("address out of range"),
         };
     }
 
+
+    pub fn dma_transfer(&mut self) {
+        let source_address = (self.read_memory(0xFF46) as u16) << 8;
+        for x in 0..160 {
+            // transfer sprite data
+            self.write_memory(0xFE00 + x, self.read_memory(source_address + x));
+        }
+    }
 
 }
 

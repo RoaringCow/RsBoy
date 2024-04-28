@@ -4,7 +4,6 @@ mod cpu;
 mod registers;
 mod ppu;
 mod memory;
-mod gameboy_io;
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -241,7 +240,18 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
-
+    #[test]
+    fn test_dma_transfer(){
+        let mut cpu = cpu::CPU::new(ADDRESS);
+        cpu.memory.write_memory(0xFF46, 0xC0);
+        for x in 0..160 {
+            cpu.memory.write_memory(0xC000 + x, x as u8);
+        }
+        cpu.memory.dma_transfer();
+        for x in 0..160 {
+            assert_eq!(cpu.memory.ppu.oam[x], x as u8);
+        }
+    }
     #[test]
     fn test_tile_data_merge() {
 
