@@ -4,6 +4,7 @@ mod cpu;
 mod registers;
 mod ppu;
 mod memory;
+mod apu;
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -19,8 +20,9 @@ const SCALE: usize = 6;
 // on linux
 //const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 // on Mac
-const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
+//const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
+const ADDRESS: &str = "/Users/ersandemircan/Downloads/tennis.gb";
 fn main() {
 
     // last developed
@@ -45,6 +47,7 @@ fn main() {
 
 
 
+    /*
 
 
     // test background
@@ -195,19 +198,20 @@ fn main() {
     cpu.memory.ppu.oam[3] = 0b00000000;
 
     cpu.memory.ppu.wy = 130;
-
+*/
     let mut x = 0;
     let mut now = time::Instant::now();
 
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
+        //thread::sleep(time::Duration::from_millis(10));
         if x == 35112{
             cpu.memory.ppu.update_display();
             cpu.memory.ppu.write_to_display();
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
-            cpu.memory.ppu.oam[0] += 1;
-            cpu.memory.ppu.oam[1] += 1;
+            //cpu.memory.ppu.oam[0] += 1;
+            //cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             /*
@@ -222,12 +226,6 @@ fn main() {
 
         x += 1;
     }
-       let data_low = 0x42;
-       let data_high = 0x42;
-       for x in 0..8 {
-           // map the color code to a value that minifb can use
-           println!("{} ", ((data_low >> (7 - x)) & 1) | ((data_high >> (7 - x)) & 1) << 1); 
-       }
 }
 
 

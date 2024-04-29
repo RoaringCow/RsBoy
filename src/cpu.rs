@@ -82,7 +82,7 @@ impl CPU {
                 h: 0x0,
                 l: 0x0,
                 sp: 0xFFFE, // not sure about this
-                pc: 0x0000, //only to test
+                pc: 0x0100, //only to test
             },
             memory: Memory::new(game_rom),
             halted: false,
@@ -1340,6 +1340,7 @@ impl CPU {
 
         };
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
+        println!("pc: {:x}   opcode: {:x},  size: {}", self.registers.pc, OPCODE_SIZES[opcode as usize] as u16, opcode);
         cycles
 
     }

@@ -90,7 +90,7 @@ impl Memory {
             0x0000..=0x7FFF => self.rom.rom[address as usize] = value, // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] = value, // VRAM
             0xA000..=0xBFFF => (), // External RAM
-            0xC000..=0xCFFF => self.wram[address as usize - 0xC000] = value, // RAM
+            0xC000..=0xDFFF => self.wram[address as usize - 0xC000] = value, // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000] = value, // Echo RAM
             0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00] = value,//self.gpu.read_oam(address), // OAM
             0xFEA0..=0xFEFF => (),// not usable
@@ -138,7 +138,7 @@ impl Memory {
             } ,
             0xFF80..=0xFFFE => self.hram[address as usize - 0xFF80] = value, // High RAM
             0xFFFF => self.ie = value, // Interrupt Enable Register
-            _ => panic!("address out of range"),
+            _ => panic!("address out of range: {:x}", address),
         };
     }
 
