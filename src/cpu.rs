@@ -82,7 +82,7 @@ impl CPU {
                 h: 0x0,
                 l: 0x0,
                 sp: 0xFFFE, // not sure about this
-                pc: 0x0100, //only to test
+                pc: 0x0000, //only to test
             },
             memory: Memory::new(game_rom),
             halted: false,
@@ -171,7 +171,7 @@ impl CPU {
             // --------------------------------------------------------------------
             0b00 => match opcode {
                 0x00 => 4,
-                0x10 => todo!(),
+                0x10 => 4,
 
                 // ----------------- Jumps ----------------------
                 //Jumps with offset 8bit
@@ -184,7 +184,10 @@ impl CPU {
                     if self.registers.f >> 7 == 0 {
                         self.jump_8bitoffset();
                         12
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
                 0x28 => {
@@ -192,14 +195,20 @@ impl CPU {
                     if self.registers.f >> 7 == 1 {
                         self.jump_8bitoffset();
                         12
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
                 },
                 0x30 => {
                     // if carry flag reset
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_8bitoffset();
                         12
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
                 0x38 => {
@@ -207,7 +216,10 @@ impl CPU {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_8bitoffset();
                         12
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
 
@@ -1078,7 +1090,10 @@ impl CPU {
                     if self.registers.f >> 7 == 0 {
                         self.jump_16bitaddress();
                         16
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xCA => {
@@ -1086,21 +1101,30 @@ impl CPU {
                     if self.registers.f >> 7 == 1 {
                         self.jump_16bitaddress();
                         16
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xD2 => {
                     if self.registers.f >> 4 & 1 == 0 {
                         self.jump_16bitaddress();
                         16
-                    }else { 12 }
+                    }else {
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xDA => {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.jump_16bitaddress();
                         16
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 }
                 0xC3 => { // şişko kalp
@@ -1121,28 +1145,40 @@ impl CPU {
                     if self.registers.f >> 7 == 0 {
                         self.call();
                         24
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xCC => {
                     if self.registers.f >> 7 == 1 {
                         self.call();
                         24
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xD4 => {
                     if self.registers.f >> 4 & 1 == 0 {
                         self.call();
                         24
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xDC => {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.call();
                         24
-                    }else { 12 }
+                    }else { 
+                        self.registers.pc += 3;
+                        12 
+                    }
 
                 },
                 0xCD => {
@@ -1161,7 +1197,10 @@ impl CPU {
                     if self.registers.f >> 7 == 0 {
                         self.return_instruction();
                         20
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
                 0xC8 => {
@@ -1169,7 +1208,10 @@ impl CPU {
                     if self.registers.f >> 7 == 1 {
                         self.return_instruction();
                         20
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
                 0xD0 => {
@@ -1177,7 +1219,10 @@ impl CPU {
                     if self.registers.f >> 4 & 1 == 0 {
                         self.return_instruction();
                         20
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
                 0xD8 => {
@@ -1185,7 +1230,10 @@ impl CPU {
                     if self.registers.f >> 4 & 1 == 1 {
                         self.return_instruction();
                         20
-                    }else { 8 }
+                    }else { 
+                        self.registers.pc += 2;
+                        8 
+                    }
 
                 },
 
@@ -1339,8 +1387,8 @@ impl CPU {
             _ => 4
 
         };
+        println!("pc: {:x}   opcode: {:x},  size: {}", self.registers.pc, opcode, OPCODE_SIZES[opcode as usize] as u16);
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
-        println!("pc: {:x}   opcode: {:x},  size: {}", self.registers.pc, OPCODE_SIZES[opcode as usize] as u16, opcode);
         cycles
 
     }

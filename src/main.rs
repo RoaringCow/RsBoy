@@ -14,21 +14,16 @@ use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 6;
+const SCALE: usize = 2;
 
 #[allow(dead_code)]
 // on linux
-//const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
 // on Mac
 //const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
-const ADDRESS: &str = "/Users/ersandemircan/Downloads/tennis.gb";
 fn main() {
 
-    // last developed
-    // on linux
-    //let mut cpu = cpu::CPU::new(ADDRESS);
-    // on Mac
     let mut cpu = cpu::CPU::new(ADDRESS);
 
 
@@ -48,7 +43,6 @@ fn main() {
 
 
     /*
-
 
     // test background
 
@@ -188,9 +182,9 @@ fn main() {
 
 
     // make cpu loop
-    cpu.memory.write_memory(0x0020, 0xC3);
-    cpu.memory.write_memory(0x0021, 0x00);
-    cpu.memory.write_memory(0x0022, 0x00);
+    cpu.memory.write_memory(0x0120, 0xC3);
+    cpu.memory.write_memory(0x0121, 0x00);
+    cpu.memory.write_memory(0x0122, 0x00);
     // sprite data
     cpu.memory.ppu.oam[0] = 0x20;
     cpu.memory.ppu.oam[1] = 0x30;
@@ -198,14 +192,24 @@ fn main() {
     cpu.memory.ppu.oam[3] = 0b00000000;
 
     cpu.memory.ppu.wy = 130;
-*/
+
+
+    */
     let mut x = 0;
     let mut now = time::Instant::now();
+
+    for a in 0..0x8000 {
+        println!("address: {:x},  opcode: {:x}", a, cpu.memory.read_memory(a));
+    }
+
+
+    // 0xFF opcode ile reset 38 yapıyor ???????????
+    todo!("RETURNden sonra döndüğü yeri atlıyor");
 
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
-        //thread::sleep(time::Duration::from_millis(10));
+        thread::sleep(time::Duration::from_millis(100));
         if x == 35112{
             cpu.memory.ppu.update_display();
             cpu.memory.ppu.write_to_display();
