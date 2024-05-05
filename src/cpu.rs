@@ -82,7 +82,7 @@ impl CPU {
                 h: 0x0,
                 l: 0x0,
                 sp: 0xFFFE, 
-                pc: 0x0000, 
+                pc: 0x0100, 
             },
             memory: Memory::new(game_rom),
             halted: false,

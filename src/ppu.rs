@@ -54,6 +54,7 @@ pub struct PPU {
     pub wx: u8,
 
 
+    sprite_buffer: Vec<(u8, u8, u8, u8)>,
 
     // to not reallocate every time
     window_data: [u32; 256 * 256], 
@@ -112,6 +113,7 @@ impl PPU {
                 color1: 0b10,
                 color0: 0b11,
             },
+            sprite_buffer: Vec::new(),
             window_data: [0; 256 * 256]
         }
     }
@@ -124,12 +126,15 @@ impl PPU {
 
         if self.ly < 144 {
             self.handle_background_line();
+            self.write_line_to_display();
             //self.handle_window_line();
-            self.handle_sprite_line();
+            //self.load_sprites_into_buffer();
+            //self.handle_sprite_line();
         }
 
         self.ly += 1;
     }
+
 
 
     fn handle_background_line(&mut self) {
@@ -155,13 +160,12 @@ impl PPU {
         // write the line
         for x in 0..32 {
             let tilemap_number: u16 = self.ly as u16 / 8 * 32 + x; 
-            
+
             // number of tiles in a line / slice of tile width/ tile height
             let offset_y = (tilemap_number / 32) as usize * 32 * 8 * 8;
             let offset_x = (tilemap_number % 32) as usize * 8;
-                
+
             let tile_number = self.vram[(tilemap_number + background_tilemap_offset) as usize - 0x8000];
-            println!("x: {}, y: {},   tile: {}, ly: {}, tile_number: {}", offset_x, offset_y, tilemap_number, self.ly, tile_number);
             let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * (self.ly as usize % 8); 
             let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
             let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
@@ -174,120 +178,79 @@ impl PPU {
                     3 => 0xFFFFFF,
                     _ => 0x000000,
                 };
+                todo!("problem with positioning (weird lines)");
+                // Gelecekteki Ersana bol şans dilerim
                 self.buffer[(self.ly as usize % 8) * 32 * 8 + tile_x + offset_y + offset_x] = color;
             }
         }
     } // handle background line end
 
+
+    fn load_sprites_into_buffer(&mut self) {
+        self.sprite_buffer.clear();
+        // this is to get the sprite that are on that line
+        for sprite_number in 0..40 {
+            let sprite_y = self.oam[sprite_number as usize * 4];
+            let sprite_x = self.oam[sprite_number as usize * 4 + 1];
+            let tile_number = self.oam[sprite_number as usize * 4 + 2];
+            let flags = self.oam[sprite_number as usize * 4 + 3];
+
+
+            // ---- Check if Sprite is on screen ------
+            // if out of screen on x
+            if sprite_x == 0 || sprite_x >= 168 {
+                continue;
+            }
+            // if out of screen on y
+            let sprite_size = 8 + (8 * ((self.lcd_control >> 2) & 1));
+            if sprite_y <= 16 - sprite_size || sprite_y >= 160 {
+                continue;
+            }
+
+            if self.ly + 16 >= sprite_y && self.ly + 16 < sprite_y + sprite_size && self.sprite_buffer.len() < 10 {
+                self.sprite_buffer.push((sprite_y, sprite_x, tile_number, flags));
+                //println!("found a sprite!: y: {}, x: {}, no: {}, flags: {:b}", sprite_y, sprite_x, tile_number, flags);
+            }
+        }
+    }
+
     fn handle_sprite_line(&mut self) {
-        // Sprite stuff
-        //
-        //
-        if (self.lcd_control >> 1) & 1 == 1{
-            for sprite_number in 0..40 {
-                let sprite_y = self.oam[sprite_number as usize * 4];
-                let sprite_x = self.oam[sprite_number as usize * 4 + 1];
-                let tile_number = self.oam[sprite_number as usize * 4 + 2];
-                let flags = self.oam[sprite_number as usize * 4 + 3];
 
+        for sprite in self.sprite_buffer.iter() {
+            let y_offset = self.ly - (sprite.0 - 16);
 
-                // ---- Check if Sprite is on screen ------
-                // if out of screen on x
-                if sprite_x == 0 || sprite_x >= 168 {
-                    break;
-                }
-                // if out of screen on y
-                let sprite_size = 8 + (8 * (self.lcd_control >> 2) & 1);
-                if sprite_y <= 16 - sprite_size || sprite_y >= 160 {
-                    break;
-                }
+            let mut sprite_data_y = y_offset;
+            if (sprite.3 >> 6) & 1 == 1{
+                sprite_data_y = 7 - y_offset;
+            }
 
-                // Getting the sprite data
-                let mut sprite_data: [[u32; 8]; 8] = [[0; 8]; 8];
-                for y in 0..8 {
-                    // 0x8000 is not added because it will be subtracted otherwise
-                    let address = 16 * tile_number + y * 2;
-                    let data_low = self.vram[address as usize];
-                    let data_high = self.vram[address as usize + 1];
-                    for x in 0..8 {
-                        // map the color code to a value that minifb can use
-                        let color = match ((data_low >> (7 - x)) & 1) << 1 | ((data_high >> (7 - x)) & 1) {
-                            0 => 0x000000,
-                            1 => 0x555555,
-                            2 => 0xAAAAAA,
-                            3 => 0xFFFFFF,
-                            _ => 0x000000,
-                        };
-                        sprite_data[y as usize][x as usize] = color;
-                    }
+            let address = 16 * (sprite.2) + sprite_data_y * 2;
+            let data_low = self.vram[address as usize];
+            let data_high = self.vram[address as usize + 1];
+            //println!("address: {:x}", address as u16 + 0x8000);
+            //println!("high: {:b}, low: {:b}", data_high, data_low);
+            for x in 0..8 {
+                // if current position is out of display
+                if sprite.1 + x > 166 {break;}
+
+                let color = match ((data_low >> (7 - x)) & 1) << 1 | ((data_high >> (7 - x)) & 1) {
+                    0 => 0x000000,
+                    1 => 0x555555,
+                    2 => 0xAAAAAA,
+                    3 => 0xFFFFFF,
+                    _ => 0x000000,
+                };
+                if !((sprite.3 >> 7 ) == 1 && self.display[(self.ly * 160 + sprite.1 + x - 8) as usize] != 0){
+                    self.display[(self.ly as u16 * 160 + sprite.1 as u16 + x as u16 - 8) as usize] = color;
                 }
 
-                // printing sprite line by line
-                for y in 0..8 {
-                    if sprite_y + y >= 160 || sprite_y + y < 16 {break;}
-
-                    // division by zero errors...  shit
-                    let offset_y: usize = {
-                        //((sprite_y - 16 + y) % 144) + self.scy == 0
-                        let first_element = sprite_y - 16 + y;
-                        if first_element == 0 {
-                            if self.scy == 0 {
-                                0
-                            }else {
-                                self.scy as usize % 256
-                            }
-                        }else {
-                            if first_element == 144 && self.scy == 0 {
-                                0
-                            }
-                            else {
-                                ((first_element as usize % 144) + self.scy as usize) % 256
-                            }
-                        }
-                    } * 256; // well im not proud of this
-                             //
-                    for x in 0..8 {
-                        if sprite_x + x >= 168 {break;}
-
-
-                        let offset_x: usize = {
-                            let first_element = sprite_x - 8 + x;
-
-                            if first_element == 0 {
-                                if self.scx == 0 {
-                                    0
-                                }else {
-                                    self.scx as usize % 256
-                                }
-                            }else {
-                                if first_element == 160 && self.scx == 0 {
-                                    0
-                                }
-                                else {
-                                    ((first_element as usize % 160) + self.scx as usize) % 256
-                                }
-                            }
-                        };
-
-                        // to support fliping
-                        let mut sprite_data_y = y;
-                        let mut sprite_data_x = x;
-                        if (flags >> 6) & 1 == 1{
-                            sprite_data_y = 7 - y;
-                            sprite_data_x = 7 - y;
-                        }
-                        let color_to_print = sprite_data[sprite_data_y as usize][sprite_data_x as usize];
-                        if !((flags >> 7 ) == 1 && self.buffer[offset_y + offset_x] != 0){
-                            self.buffer[offset_y + offset_x] = color_to_print; 
-                        }
-                    }
-                }
-
-
+                //println!("painted a spot {:x}!   y: {}   x: {}", color, self.ly, sprite.1 - 8 + x);
+                //println!("debvug   {:b} | {:b}     number: {}", ((data_low >> (7 - x)) & 1) << 1, (data_high >> (7 - x)) & 1, sprite.2);
             }
         }
 
-    } // handle sprite line end
+
+    }
 
 
     fn handle_window_line(&mut self) {
@@ -353,11 +316,10 @@ impl PPU {
 
 
 
-    pub fn write_to_display(&mut self) {
-        for y in 0..144 {
-            for x in 0..160 {
-                self.display[y * 160 + x] = self.buffer[y * 256 + x];
-            }
+    pub fn write_line_to_display(&mut self) {
+        for x in 0..160 {
+            if x as u16 + self.scx as u16 >= 256 {break;}
+            self.display[self.ly as usize * 144 + x] = self.buffer[(self.ly as usize + self.scy as usize) * 256 + x + self.scx as usize];
         }
     }
 

@@ -185,33 +185,34 @@ fn main() {
     cpu.memory.write_memory(0x0121, 0x00);
     cpu.memory.write_memory(0x0122, 0x00);
     // sprite data
-    cpu.memory.ppu.oam[0] = 0x20;
-    cpu.memory.ppu.oam[1] = 0x30;
+    cpu.memory.ppu.oam[0] = 0x10;
+    cpu.memory.ppu.oam[1] = 0x10;
     cpu.memory.ppu.oam[2] = 0x05;
     cpu.memory.ppu.oam[3] = 0b00000000;
 
     cpu.memory.ppu.wy = 130;
 
 
-    let mut x = 0;
+    let mut full_screen_refresh = 0;
+    let mut ppu_line_update = 0;
     let mut now = time::Instant::now();
-
-    for a in 0..0x8000 {
-        println!("address: {:x},  opcode: {:x}", a, cpu.memory.read_memory(a));
-    }
 
 
 
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
-        //thread::sleep(time::Duration::from_millis(100));
-        if x == 114{
+        //thread::sleep(time::Duration::from_millis(1));
+        
+        if ppu_line_update >= 228 {
             cpu.memory.ppu.update_display();
-            cpu.memory.ppu.write_to_display();
+            ppu_line_update = 0;
+        }
+
+        if full_screen_refresh >= 35112{
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
-            //cpu.memory.ppu.oam[0] += 1;
-            //cpu.memory.ppu.oam[1] += 1;
+            cpu.memory.ppu.oam[0] += 1;
+            cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             /*
@@ -220,11 +221,13 @@ fn main() {
                }
                test += 1;
                */
-            x = 0;
+            full_screen_refresh = 0;
         }
 
 
-        x += 1;
+
+        full_screen_refresh += 1;
+        ppu_line_update += 1;
     }
 }
 
