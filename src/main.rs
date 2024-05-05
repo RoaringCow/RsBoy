@@ -42,7 +42,6 @@ fn main() {
 
 
 
-    /*
 
     // test background
 
@@ -194,7 +193,6 @@ fn main() {
     cpu.memory.ppu.wy = 130;
 
 
-    */
     let mut x = 0;
     let mut now = time::Instant::now();
 
@@ -203,14 +201,12 @@ fn main() {
     }
 
 
-    // 0xFF opcode ile reset 38 yapıyor ???????????
-    todo!("RETURNden sonra döndüğü yeri atlıyor");
 
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
-        thread::sleep(time::Duration::from_millis(100));
-        if x == 35112{
+        //thread::sleep(time::Duration::from_millis(100));
+        if x == 114{
             cpu.memory.ppu.update_display();
             cpu.memory.ppu.write_to_display();
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();

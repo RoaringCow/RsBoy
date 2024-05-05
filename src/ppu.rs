@@ -28,10 +28,10 @@ pub struct PPU {
 
     // 0xFF42 SCY
     pub scy: u8,
-    
+
     // 0xFF43 SCX
     pub scx: u8,
-    
+
     // 0xFF44 LY
     pub ly: u8,
 
@@ -53,7 +53,7 @@ pub struct PPU {
     //FF4B WX
     pub wx: u8,
 
-            
+
 
     // to not reallocate every time
     window_data: [u32; 256 * 256], 
@@ -76,16 +76,16 @@ impl PPU {
             cycle: 0,
             ppu_mode: Ppumode::OAM,
             lcd_control: 0b10010011,
-                /*
-                lcd_enable,
-                window_tile_map,
-                window_enable,
-                bg_window_tile_data,
-                bg_tile_map,
-                sprite_size,
-                sprite_enable,
-                bg_enabletrue,
-            */
+            /*
+               lcd_enable,
+               window_tile_map,
+               window_enable,
+               bg_window_tile_data,
+               bg_tile_map,
+               sprite_size,
+               sprite_enable,
+               bg_enabletrue,
+               */
             ly: 0, // scanline
             lyc: 0,
             dma_address: 0,
@@ -116,11 +116,25 @@ impl PPU {
         }
     }
 
-
     pub fn update_display(&mut self) {
+        if self.lcd_control & 1 == 0 {return;}
+        if self.ly >= 154 {
+           self.ly = 0;
+        }
 
+        if self.ly < 144 {
+            self.handle_background_line();
+            //self.handle_window_line();
+            self.handle_sprite_line();
+        }
+
+        self.ly += 1;
+    }
+
+
+    fn handle_background_line(&mut self) {
         // Background stuff
-        let background_tilemap_offset = match (self.lcd_control >> 3) & 1 {
+        let background_tilemap_offset: u16 = match (self.lcd_control >> 3) & 1 {
             1 => 0x9C00,
             0 => 0x9800,
             _ => panic!("wtf?"),
@@ -136,91 +150,36 @@ impl PPU {
             },
             _ => panic!("wtf?"),
         };
-        // loop through all the tiles
-        for address in background_tilemap_offset..background_tilemap_offset + 1024{
-            let tilemap_number = address - background_tilemap_offset;
+
+
+        // write the line
+        for x in 0..32 {
+            let tilemap_number: u16 = self.ly as u16 / 8 * 32 + x; 
+            
             // number of tiles in a line / slice of tile width/ tile height
-            let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
-            let offset_x: usize = (tilemap_number % 32) as usize * 8;
-            for y in 0..8 {
-                // Get a slice of the tile
-
-                //println!("address: {:x}", address);
-                let tile_number = self.vram[address as usize - 0x8000];
-                let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
-                let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
-                let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
-
-
-                for x in 0..8 {
-                    // map the color code to a value that minifb can use
-                    let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
-                        0 => 0x000000,
-                        1 => 0x555555,
-                        2 => 0xAAAAAA,
-                        3 => 0xFFFFFF,
-                        _ => 0x000000,
-                    };
-                    self.buffer[(y * 32 * 8) + x + offset_y + offset_x] = color;
-                }
-            }
-        } 
-
-
-        // window stuff
-        if (self.lcd_control >> 5) & 1 == 1{
-            let window_tilemap_offset = match (self.lcd_control >> 6) & 1{
-                0 => 0x9800,
-                1 => 0x9C00,
-                _ => panic!("wtf?"),
-            };
-            let tile_data_offset = match (self.lcd_control >> 4) & 1{
-                1 => {
-                    // 0x8000 - 0x8FFF
-                    0x8000
-                }
-                0 => {
-                    // 0x8800 - 0x97FF
-                    0x8800
-                }
-                _ => panic!("wtf?"),
-            };
-            for address in window_tilemap_offset..window_tilemap_offset + 1024 {
-                let tilemap_number = address - window_tilemap_offset;
-
-                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
-                let offset_x: usize = (tilemap_number % 32) as usize * 8;
-                for y in 0..8 {
-                    let tile_number = self.vram[address as usize - 0x8000];
-                    let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
-                    let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
-                    let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
-
-                    for x in 0..8 {
-                    
-                        let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
-                            0 => 0x000000,
-                            1 => 0x555555,
-                            2 => 0xAAAAAA,
-                            3 => 0xFFFFFF,
-                            _ => 0x000000,
-                        };
-                        self.window_data[(y * 32 * 8) + x + offset_y + offset_x] = color;
-                    }
-                }
-
+            let offset_y = (tilemap_number / 32) as usize * 32 * 8 * 8;
+            let offset_x = (tilemap_number % 32) as usize * 8;
+                
+            let tile_number = self.vram[(tilemap_number + background_tilemap_offset) as usize - 0x8000];
+            println!("x: {}, y: {},   tile: {}, ly: {}, tile_number: {}", offset_x, offset_y, tilemap_number, self.ly, tile_number);
+            let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * (self.ly as usize % 8); 
+            let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
+            let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
+            for tile_x in 0..8 {
+                // map the color code to a value that minifb can use
+                let color = match ((tile_data_low >> (7 - tile_x)) & 1) << 1 | ((tile_data_high >> (7 - tile_x)) & 1) {
+                    0 => 0x000000,
+                    1 => 0x555555,
+                    2 => 0xAAAAAA,
+                    3 => 0xFFFFFF,
+                    _ => 0x000000,
+                };
+                self.buffer[(self.ly as usize % 8) * 32 * 8 + tile_x + offset_y + offset_x] = color;
             }
         }
+    } // handle background line end
 
-        // This is a really inefficent way but i guess doesnt matter that much
-        for y in 0..256 {
-            if self.wy as u16 + y as u16 >= 256 {break;}
-            for x in 0..256 {
-                if self.wx as u16 + x as u16 >= 256 {break;}
-                self.buffer[(self.wy as usize + y) * 256 + (x + self.wx as usize)] = self.window_data[(self.wy as usize + y) * 256 + (x + self.wx as usize)];
-            }
-        }
-
+    fn handle_sprite_line(&mut self) {
         // Sprite stuff
         //
         //
@@ -327,7 +286,71 @@ impl PPU {
 
             }
         }
-    }
+
+    } // handle sprite line end
+
+
+    fn handle_window_line(&mut self) {
+        // window stuff
+        if (self.lcd_control >> 5) & 1 == 1{
+            let window_tilemap_offset = match (self.lcd_control >> 6) & 1{
+                0 => 0x9800,
+                1 => 0x9C00,
+                _ => panic!("wtf?"),
+            };
+            let tile_data_offset = match (self.lcd_control >> 4) & 1{
+                1 => {
+                    // 0x8000 - 0x8FFF
+                    0x8000
+                }
+                0 => {
+                    // 0x8800 - 0x97FF
+                    0x8800
+                }
+                _ => panic!("wtf?"),
+            };
+            for current_collumn in 0..32 {
+
+                let tilemap_number = self.ly * 32 + current_collumn;
+
+                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
+                let offset_x: usize = (tilemap_number % 32) as usize * 8;
+                for y in 0..8 {
+                    let tile_number = self.vram[window_tilemap_offset + tilemap_number as usize - 0x8000];
+                    let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
+                    let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
+                    let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
+
+                    for x in 0..8 {
+                    
+                        let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
+                            0 => 0x000000,
+                            1 => 0x555555,
+                            2 => 0xAAAAAA,
+                            3 => 0xFFFFFF,
+                            _ => 0x000000,
+                        };
+                        self.window_data[(y * 32 * 8) + x + offset_y + offset_x] = color;
+                    }
+                }
+
+            }
+        }
+
+
+        //todo!("fix this window thing");
+       // self.wy + self.ly ly 5 ve wy 1 iken 5. satırı yazması gerektiği halde 6. satıra yazacak
+
+
+
+        // This is a really inefficent way but i guess doesnt matter that much
+        if self.wy as u16 + self.ly as u16 >= 256 {return;}
+        for x in 0..256 {
+            if self.wx as u16 + x as u16 >= 256 {break;}
+            self.buffer[(self.wy as usize + self.ly as usize) * 256 + (x + self.wx as usize)] = self.window_data[(self.wy as usize + self.ly as usize) * 256 + (x + self.wx as usize)];
+        }
+    } // window line handle end
+
 
 
     pub fn write_to_display(&mut self) {

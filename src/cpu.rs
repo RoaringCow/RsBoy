@@ -73,7 +73,7 @@ impl CPU {
         CPU {
 
             registers: Register {
-                a: 0x0,
+                a: 0x11,
                 f: 0x0,
                 b: 0x0,
                 c: 0x0,
@@ -81,8 +81,8 @@ impl CPU {
                 e: 0x0,
                 h: 0x0,
                 l: 0x0,
-                sp: 0xFFFE, // not sure about this
-                pc: 0x0000, //only to test
+                sp: 0xFFFE, 
+                pc: 0x0000, 
             },
             memory: Memory::new(game_rom),
             halted: false,
@@ -1192,6 +1192,12 @@ impl CPU {
                     self.return_instruction();
                     16
                 },
+                0xD9 => {
+                    //return but also enable interrupt enable
+                    self.return_instruction();
+                    self.ei = true;
+                    16
+                }
                 0xC0 => {
                     // if zero flag reset
                     if self.registers.f >> 7 == 0 {
@@ -1387,7 +1393,9 @@ impl CPU {
             _ => 4
 
         };
-        println!("pc: {:x}   opcode: {:x},  size: {}", self.registers.pc, opcode, OPCODE_SIZES[opcode as usize] as u16);
+
+        // end of this function (to find it fast with vim)
+        //println!("pc: {:x}   opcode: {:x},  size: {}", self.registers.pc, opcode, OPCODE_SIZES[opcode as usize] as u16);
         self.registers.pc += OPCODE_SIZES[opcode as usize] as u16;
         cycles
 
