@@ -57,7 +57,7 @@ pub struct PPU {
     sprite_buffer: Vec<(u8, u8, u8, u8)>,
 
     // to not reallocate every time
-    window_data: [u32; 256 * 256], 
+    window_data: [u32; 256], 
 
 
 }
@@ -76,7 +76,7 @@ impl PPU {
             oam: [0; 0xA0],
             cycle: 0,
             ppu_mode: Ppumode::OAM,
-            lcd_control: 0b10010011,
+            lcd_control: 0b11110011,
             /*
                lcd_enable,
                window_tile_map,
@@ -114,7 +114,7 @@ impl PPU {
                 color0: 0b11,
             },
             sprite_buffer: Vec::new(),
-            window_data: [0; 256 * 256]
+            window_data: [0; 256]
         }
     }
 
@@ -126,8 +126,8 @@ impl PPU {
 
         if self.ly < 144 {
             self.handle_background_line();
+            self.handle_window_line();
             self.write_line_to_display();
-            //self.handle_window_line();
             self.load_sprites_into_buffer();
             self.handle_sprite_line();
         }
@@ -142,7 +142,12 @@ impl PPU {
         let background_tilemap_offset: u16 = match (self.lcd_control >> 3) & 1 {
             1 => 0x9C00,
             0 => 0x9800,
-            _ => panic!("wtf?"),
+            _ => panic!("a"),
+        };
+        let window_tilemap_offset: u16 = match (self.lcd_control >> 6) & 1 {
+            1 => 0x9C00,
+            0 => 0x9800,
+            _=> panic!("a"),
         };
         let tile_data_offset = match (self.lcd_control >> 4) & 1{
             1 => {
@@ -153,7 +158,7 @@ impl PPU {
                 // 0x8800 - 0x97FF
                 0x8800
             },
-            _ => panic!("wtf?"),
+            _ => panic!("a"),
         };
 
 
@@ -246,68 +251,56 @@ impl PPU {
 
     }
 
-
     fn handle_window_line(&mut self) {
-        // window stuff
-        if (self.lcd_control >> 5) & 1 == 1{
-            let window_tilemap_offset = match (self.lcd_control >> 6) & 1{
-                0 => 0x9800,
-                1 => 0x9C00,
-                _ => panic!("wtf?"),
-            };
-            let tile_data_offset = match (self.lcd_control >> 4) & 1{
-                1 => {
-                    // 0x8000 - 0x8FFF
-                    0x8000
-                }
-                0 => {
-                    // 0x8800 - 0x97FF
-                    0x8800
-                }
-                _ => panic!("wtf?"),
-            };
-            for current_collumn in 0..32 {
+        // if window is disabled
+        if (self.lcd_control >> 5) & 1 == 0 {return;}
+        println!("hey!");
+        // if a part of the window is in the current line
+        if self.ly < self.wy {return;}
+        let window_tilemap_offset = match (self.lcd_control >> 6) & 1{
+            0 => 0x9800,
+            1 => 0x9C00,
+            _ => panic!("wtf?"),
+        };
+        let tile_data_offset = match (self.lcd_control >> 4) & 1{
+            1 => {
+                // 0x8000 - 0x8FFF
+                0x8000
+            }
+            0 => {
+                // 0x8800 - 0x97FF
+                0x8800
+            }
+            _ => panic!("wtf?"),
+        };
 
-                let tilemap_number = self.ly * 32 + current_collumn;
+        for x in 0..32 {
+            let tilemap_number: u16 = (self.ly as u16 - self.wy as u16) / 8 * 32 + x;
 
-                let offset_y: usize = (tilemap_number / 32) as usize * 32 * 8 * 8;
-                let offset_x: usize = (tilemap_number % 32) as usize * 8;
-                for y in 0..8 {
-                    let tile_number = self.vram[window_tilemap_offset + tilemap_number as usize - 0x8000];
-                    let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * y;
-                    let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
-                    let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
-
-                    for x in 0..8 {
-                    
-                        let color = match ((tile_data_low >> (7 - x)) & 1) << 1 | ((tile_data_high >> (7 - x)) & 1) {
-                            0 => 0x000000,
-                            1 => 0x555555,
-                            2 => 0xAAAAAA,
-                            3 => 0xFFFFFF,
-                            _ => 0x000000,
-                        };
-                        self.window_data[(y * 32 * 8) + x + offset_y + offset_x] = color;
-                    }
-                }
-
+            let tile_number = self.vram[(tilemap_number + window_tilemap_offset) as usize - 0x8000];
+            let tile_data_address = tile_data_offset as usize + tile_number as usize * 16 + 2 * (self.ly as usize % 8); 
+            let tile_data_low = self.vram[tile_data_address - 0x8000] as u16;
+            let tile_data_high = self.vram[tile_data_address + 1 - 0x8000] as u16;
+            for tile_x in 0..8 {
+                // map the color code to a value that minifb can use
+                let color = match ((tile_data_low >> (7 - tile_x)) & 1) << 1 | ((tile_data_high >> (7 - tile_x)) & 1) {
+                    0 => 0x000000,
+                    1 => 0x555555,
+                    2 => 0xAAAAAA,
+                    3 => 0xFFFFFF,
+                    _ => 0x000000,
+                };
+                self.window_data[(x * 8 + tile_x) as usize]= color;
             }
         }
 
-
-        //todo!("fix this window thing");
-       // self.wy + self.ly ly 5 ve wy 1 iken 5. satırı yazması gerektiği halde 6. satıra yazacak
-
-
-
-        // This is a really inefficent way but i guess doesnt matter that much
-        if self.wy as u16 + self.ly as u16 >= 256 {return;}
-        for x in 0..256 {
-            if self.wx as u16 + x as u16 >= 256 {break;}
-            self.buffer[(self.wy as usize + self.ly as usize) * 256 + (x + self.wx as usize)] = self.window_data[(self.wy as usize + self.ly as usize) * 256 + (x + self.wx as usize)];
+        // load window data into buffer
+        for x in self.wx..=255 {
+            self.buffer[self.ly as usize * 256 + x as usize] = self.window_data[(x - self.wx) as usize];
         }
-    } // window line handle end
 
+
+    }
 
 
     pub fn write_line_to_display(&mut self) {

@@ -177,13 +177,12 @@ fn main() {
     for x in 0x9800..0x9C00 {
         println!("{:x}, {}", x, cpu.memory.read_memory(x));
     }
+    for x in 0x9C00..0x9FFF {
+        cpu.memory.write_memory(x, 0x2);
+    }
     // -----------------
 
 
-    // make cpu loop
-    cpu.memory.write_memory(0x0120, 0xC3);
-    cpu.memory.write_memory(0x0121, 0x00);
-    cpu.memory.write_memory(0x0122, 0x00);
     // sprite data
     cpu.memory.ppu.oam[0] = 0x10;
     cpu.memory.ppu.oam[1] = 0x10;
@@ -191,7 +190,6 @@ fn main() {
     cpu.memory.ppu.oam[3] = 0b00000000;
 
     cpu.memory.ppu.wy = 130;
-
 
     let mut full_screen_refresh = 0;
     let mut ppu_line_update = 0;
