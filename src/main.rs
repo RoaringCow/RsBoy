@@ -202,7 +202,7 @@ fn main() {
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
-        //thread::sleep(time::Duration::from_millis(1));
+        
         
         if ppu_line_update >= 228 {
             cpu.memory.ppu.update_display();
@@ -215,12 +215,6 @@ fn main() {
             cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
-            /*
-               for a in 0x9800..0x9C00 {
-               cpu.memory.write_memory(a, ((a+ test % 4) as u64 %4) as u8);
-               }
-               test += 1;
-               */
             full_screen_refresh = 0;
         }
 

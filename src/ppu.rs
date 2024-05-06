@@ -128,8 +128,8 @@ impl PPU {
             self.handle_background_line();
             self.write_line_to_display();
             //self.handle_window_line();
-            //self.load_sprites_into_buffer();
-            //self.handle_sprite_line();
+            self.load_sprites_into_buffer();
+            self.handle_sprite_line();
         }
 
         self.ly += 1;
@@ -159,7 +159,7 @@ impl PPU {
 
         // write the line
         for x in 0..32 {
-            let tilemap_number: u16 = self.ly as u16 / 8 * 32 + x; 
+            let tilemap_number: u16 = self.ly as u16 / 8 * 32 + x;
 
             // number of tiles in a line / slice of tile width/ tile height
             let offset_y = (tilemap_number / 32) as usize * 32 * 8 * 8;
@@ -178,8 +178,6 @@ impl PPU {
                     3 => 0xFFFFFF,
                     _ => 0x000000,
                 };
-                todo!("problem with positioning (weird lines)");
-                // Gelecekteki Ersana bol şans dilerim
                 self.buffer[(self.ly as usize % 8) * 32 * 8 + tile_x + offset_y + offset_x] = color;
             }
         }
@@ -227,8 +225,6 @@ impl PPU {
             let address = 16 * (sprite.2) + sprite_data_y * 2;
             let data_low = self.vram[address as usize];
             let data_high = self.vram[address as usize + 1];
-            //println!("address: {:x}", address as u16 + 0x8000);
-            //println!("high: {:b}, low: {:b}", data_high, data_low);
             for x in 0..8 {
                 // if current position is out of display
                 if sprite.1 + x > 166 {break;}
@@ -244,8 +240,6 @@ impl PPU {
                     self.display[(self.ly as u16 * 160 + sprite.1 as u16 + x as u16 - 8) as usize] = color;
                 }
 
-                //println!("painted a spot {:x}!   y: {}   x: {}", color, self.ly, sprite.1 - 8 + x);
-                //println!("debvug   {:b} | {:b}     number: {}", ((data_low >> (7 - x)) & 1) << 1, (data_high >> (7 - x)) & 1, sprite.2);
             }
         }
 
@@ -318,8 +312,7 @@ impl PPU {
 
     pub fn write_line_to_display(&mut self) {
         for x in 0..160 {
-            if x as u16 + self.scx as u16 >= 256 {break;}
-            self.display[self.ly as usize * 144 + x] = self.buffer[(self.ly as usize + self.scy as usize) * 256 + x + self.scx as usize];
+            self.display[self.ly as usize * 160 + x] = self.buffer[((self.ly as usize + self.scy as usize) % 256) * 256 + (x + self.scx as usize) % 256];
         }
     }
 
