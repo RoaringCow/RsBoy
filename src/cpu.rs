@@ -101,7 +101,7 @@ impl CPU {
             0b100 => &mut self.registers.h,
             0b101 => &mut self.registers.l,
             0b111 => &mut self.registers.a,
-            _ => {panic!("this register does not exist!")}
+            _ => {panic!("this register does not exist! opcode: {:x}", self.memory.read_memory(self.registers.pc))}
         }
 
     }
@@ -161,6 +161,7 @@ impl CPU {
 
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) -> u8{
+        println!("pc: {:x} ->  {:x}", self.registers.pc, opcode);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
@@ -1381,6 +1382,7 @@ impl CPU {
                 // ------------------ PREFIX CB ------------------
                 0xCB => {
                     let cb_opcode = self.memory.read_memory(self.registers.pc + 1);
+                    println!("CB opcode: {:x}", cb_opcode);
                     let cycles_cb = self.run_cb_prefix(cb_opcode);
 
                     4 + cycles_cb
@@ -1632,9 +1634,9 @@ impl CPU {
                 self.registers.f = self.registers.f | 0b00100000;
 
                 let cycles: u8;
-                let bit_to_test = cb_opcode >> 3 & 0x07;
+                let bit_to_test = cb_opcode >> 3 & 0x07; // shift amount
                 let value_to_test = {
-                    if cb_opcode & 0x0F == 0b110 {
+                    if cb_opcode & 0x07 == 0b110 {
                         // address HL
                         cycles = 16;
                         self.memory.read_memory(self.registers.get_hl())

@@ -254,7 +254,6 @@ impl PPU {
     fn handle_window_line(&mut self) {
         // if window is disabled
         if (self.lcd_control >> 5) & 1 == 0 {return;}
-        println!("hey!");
         // if a part of the window is in the current line
         if self.ly < self.wy {return;}
         let window_tilemap_offset = match (self.lcd_control >> 6) & 1{

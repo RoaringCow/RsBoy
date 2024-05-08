@@ -18,14 +18,13 @@ const SCALE: usize = 2;
 
 #[allow(dead_code)]
 // on linux
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/emptyfortests.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/sprite_priority.gb";//emptyfortests.gb";
 // on Mac
 //const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
     let mut cpu = cpu::CPU::new(ADDRESS);
-
 
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -43,6 +42,7 @@ fn main() {
 
 
 
+    /*
     // test background
 
     /*
@@ -191,6 +191,10 @@ fn main() {
 
     cpu.memory.ppu.wy = 130;
 
+    */
+    for x in 0x3a00..0x43b0{
+        println!("{:x}, {:x}", x, cpu.memory.read_memory(x));
+    }
     let mut full_screen_refresh = 0;
     let mut ppu_line_update = 0;
     let mut now = time::Instant::now();
@@ -200,8 +204,10 @@ fn main() {
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.run_instruction(cpu.fetch_instruction());
+        cpu.memory.ppu.update_display();
+        window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
         
-        
+        /*
         if ppu_line_update >= 228 {
             cpu.memory.ppu.update_display();
             ppu_line_update = 0;
@@ -209,8 +215,6 @@ fn main() {
 
         if full_screen_refresh >= 35112{
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
-            cpu.memory.ppu.oam[0] += 1;
-            cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             full_screen_refresh = 0;
@@ -220,6 +224,7 @@ fn main() {
 
         full_screen_refresh += 1;
         ppu_line_update += 1;
+        */
     }
 }
 
