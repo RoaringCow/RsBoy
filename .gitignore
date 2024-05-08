@@ -14,7 +14,8 @@ Cargo.lock
 *.pdb
 
 # Ignore all gameboy roms
-#*.gb
+tetris.gb
+sprite_priority.gb
 
 # Added by cargo
 .idea/
