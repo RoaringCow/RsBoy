@@ -148,21 +148,27 @@ impl CPU {
         self.registers.pc = return_address;
     }
     fn inc_flag_check(&mut self, value: u8) {
-        let mut flag = 0;
+        let mut flag = self.registers.f & 0b0001_0000;
         if value == 0 {
-            flag |= 0b10000000;
+            flag |= 0b1000_0000;
         }
         if value & 0x0F == 0 {
-            flag |= 0b00100000;
+            flag |= 0b0010_0000;
         }
         self.registers.f = flag;
     }
     fn dec_flag_check(&mut self, value: u8) {
-        let mut flag = 0;
-        if value == 0xff {
-            flag |= 0b
+        let mut flag = 0b0100_0000;
+        flag |= self.registers.f & 0b0001_0000;
+        if value == 0 {
+            flag |= 0b1000_0000
+        }
+        if value.trailing_zeros() >= 4{
+            flag |= 0b0010_0000;
         }
     }
+
+
 
 
     #[allow(dead_code)]
@@ -276,43 +282,43 @@ impl CPU {
                 // DEC r8
                 0x05 => {
                     self.registers.b -= 1;
-                    self.inc_flag_check(self.registers.b);
+                    self.dec_flag_check(self.registers.b);
                     4
                 },
                 0x0D => {
                     self.registers.c -= 1;
-                    self.inc_flag_check(self.registers.c);
+                    self.dec_flag_check(self.registers.c);
                     4
                 },
                 0x15 => {
                     self.registers.d -= 1;
-                    self.inc_flag_check(self.registers.d);
+                    self.dec_flag_check(self.registers.d);
                     4
                 },
                 0x1D => {
                     self.registers.e -= 1;
-                    self.inc_flag_check(self.registers.e);
+                    self.dec_flag_check(self.registers.e);
                     4
                 },
                 0x25 => {
                     self.registers.h -= 1;
-                    self.inc_flag_check(self.registers.h);
+                    self.dec_flag_check(self.registers.h);
                     4
                 },
                 0x2D => {
                     self.registers.l -= 1;
-                    self.inc_flag_check(self.registers.l);
+                    self.dec_flag_check(self.registers.l);
                     4
                 },
                 0x3D => {
                     self.registers.a -= 1;
-                    self.inc_flag_check(self.registers.a);
+                    self.dec_flag_check(self.registers.a);
                     4
                 },
                 0x35 => {
                     let value = self.memory.read_memory(self.registers.get_hl());
                     self.memory.write_memory(self.registers.get_hl(), value - 1);
-                    self.inc_flag_check(value - 1);
+                    self.dec_flag_check(value - 1);
                     12
                 },
 
@@ -1637,7 +1643,7 @@ impl CPU {
             // Test bit in register
             // -----------------------------------------
             0b01 => {
-                self.registers.f = self.registers.f | 0b00100000;
+                self.registers.f = (self.registers.f & 0b0001_0000)| 0b00100000;
 
                 let cycles: u8;
                 let bit_to_test = cb_opcode >> 3 & 0x07; // shift amount
@@ -1652,10 +1658,10 @@ impl CPU {
                         *self.decode_register(cb_opcode & 0x07)
                     }
                 };
-                // value
-                if value_to_test >> bit_to_test & 1 == 0 {
+                if value_to_test & (1 << bit_to_test) == 0 {
                     self.registers.f |= 0b10000000;
                 }
+                println!("flag: {:b} value to test {:x}, bit to test {:b}", self.registers.f, value_to_test, 1 << bit_to_test);
                 cycles
             },
 

@@ -18,9 +18,9 @@ const SCALE: usize = 2;
 
 #[allow(dead_code)]
 // on linux
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/tetris.gb";
+//const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/tetris.gb";
+const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/tetris.gb";
 // on Mac
-//const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
 fn main() {
 
@@ -212,7 +212,6 @@ fn main() {
             ppu_line_update = 0;
         }
 
-        todo!("refactor all alu cpu code because its shit");
         if full_screen_refresh >= 35112{
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
             println!("display updated in: {:?}", now.elapsed());
@@ -268,6 +267,13 @@ mod tests {
         cpu.memory.write_memory(cpu.registers.get_hl(), 0x01);
         cpu.run_instruction(0x7E);
         assert_eq!(cpu.registers.a, 0x01);
+    }
+    #[test]
+    fn test_dec() {
+        let mut cpu = cpu::CPU::new(ADDRESS);
+        cpu.registers.a = 0;
+        cpu.run_instruction(0x3D);
+        assert_eq!((cpu.registers.f >> 5) & 1, 1);
     }
     #[test]
     fn test_and() {
@@ -392,7 +398,7 @@ mod tests {
         cpu.registers.a = 0b10100101;
         cpu.memory.write_memory(cpu.registers.pc + 1, 0x47);
         cpu.run_instruction(0xCB);
-        assert_eq!(cpu.registers.f >> 4 & 1, 0);
+        assert_eq!(cpu.registers.f >> 7 & 1, 0);
     }
 
     #[test]
