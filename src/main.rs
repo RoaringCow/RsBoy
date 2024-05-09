@@ -18,7 +18,7 @@ const SCALE: usize = 2;
 
 #[allow(dead_code)]
 // on linux
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/sprite_priority.gb";//emptyfortests.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/tetris.gb";
 // on Mac
 //const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/emptyfortests.gb";
 
@@ -43,6 +43,10 @@ fn main() {
 
 
     /*
+
+
+
+
     // test background
 
     /*
@@ -190,11 +194,7 @@ fn main() {
     cpu.memory.ppu.oam[3] = 0b00000000;
 
     cpu.memory.ppu.wy = 130;
-
     */
-    for x in 0x3a00..0x43b0{
-        println!("{:x}, {:x}", x, cpu.memory.read_memory(x));
-    }
     let mut full_screen_refresh = 0;
     let mut ppu_line_update = 0;
     let mut now = time::Instant::now();
@@ -207,12 +207,12 @@ fn main() {
         cpu.memory.ppu.update_display();
         window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
         
-        /*
         if ppu_line_update >= 228 {
             cpu.memory.ppu.update_display();
             ppu_line_update = 0;
         }
 
+        todo!("refactor all alu cpu code because its shit");
         if full_screen_refresh >= 35112{
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
             println!("display updated in: {:?}", now.elapsed());
@@ -224,7 +224,6 @@ fn main() {
 
         full_screen_refresh += 1;
         ppu_line_update += 1;
-        */
     }
 }
 

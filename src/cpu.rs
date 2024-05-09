@@ -73,14 +73,14 @@ impl CPU {
         CPU {
 
             registers: Register {
-                a: 0x11,
-                f: 0x0,
+                a: 0x01,
+                f: 0xb0,
                 b: 0x0,
-                c: 0x0,
+                c: 0x13,
                 d: 0x0,
-                e: 0x0,
-                h: 0x0,
-                l: 0x0,
+                e: 0xd8,
+                h: 0x01,
+                l: 0x4d,
                 sp: 0xFFFE, 
                 pc: 0x0100, 
             },
@@ -157,11 +157,17 @@ impl CPU {
         }
         self.registers.f = flag;
     }
+    fn dec_flag_check(&mut self, value: u8) {
+        let mut flag = 0;
+        if value == 0xff {
+            flag |= 0b
+        }
+    }
 
 
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) -> u8{
-        println!("pc: {:x} ->  {:x}", self.registers.pc, opcode);
+        println!("pc: {:x} ->  {:x} | a: {:x}, b: {:x}, c: {:x}, d: {:x}, e: {:x}, hl: {:x}, sp: {:x}   f: {:b}", self.registers.pc, opcode, self.registers.a, self.registers.b, self.registers.c, self.registers.d, self.registers.e, self.registers.get_hl(), self.registers.sp, self.registers.f);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
