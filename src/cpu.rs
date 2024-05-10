@@ -106,14 +106,22 @@ impl CPU {
 
     }
 
+    pub fn step(&mut self) -> u8 {
+        let opcode = self.fetch_instruction();
+        self.run_instruction(opcode)
+    }
+
+
     #[allow(dead_code)]
-    pub fn fetch_instruction(&self) -> u8{
-        self.memory.read_memory(self.registers.pc)
+    pub fn fetch_instruction(&mut self) -> u8{
+        let opcode = self.memory.read_memory(self.registers.pc);
+        opcode
     }
 
     fn jump_8bitoffset(&mut self) {
-        let offset = self.memory.read_memory(self.registers.pc + 1) as i16;
-        self.registers.pc = (self.registers.pc as i16 + offset) as u16 + 1;
+        let offset = self.memory.read_memory(self.registers.pc + 1) as i8;
+        self.registers.pc = (self.registers.pc as i16 + offset as i16) as u16 + 2;
+        // well + 1 didnt work so +2 it is!
         // + 1 is there for value reading. It reads the next address after
         // the jump instruction to get the offset.
     }
@@ -163,11 +171,12 @@ impl CPU {
         if value == 0 {
             flag |= 0b1000_0000
         }
-        if value.trailing_zeros() >= 4{
+        println!("dec value -> {:b}", value);
+        if (value + 1).trailing_zeros() >= 4{
             flag |= 0b0010_0000;
         }
+        self.registers.f = flag;
     }
-
 
 
 
