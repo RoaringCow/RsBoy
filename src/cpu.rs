@@ -683,7 +683,7 @@ impl CPU {
             // --------------------------------------------------------------------
             // Load / Halt
             0b01 => {
-                if opcode & 0x0F == 0x7 {
+                if opcode == 0x76 {
                     // HALT
                     self.halted = true;
                     4
@@ -1427,7 +1427,6 @@ impl CPU {
 
     fn run_cb_prefix(&mut self, cb_opcode: u8) -> u8 {
 
-
         let cycles_cb = match cb_opcode >> 6 {
 
             0b00 => match cb_opcode & 0xF0 {
@@ -1680,7 +1679,7 @@ impl CPU {
             0b10 => {
                 let cycles: u8;
                 let bit_to_reset = cb_opcode >> 3 & 0x07;
-                if cb_opcode & 0x0F == 0b110 {
+                if cb_opcode & 0x07 == 0b110 {
                     // address HL
                     cycles = 16;
                     let value = self.memory.read_memory(self.registers.get_hl()) & !(0b10000000 >> bit_to_reset);
@@ -1700,7 +1699,7 @@ impl CPU {
             0b11 => {
                 let cycles: u8;
                 let bit_to_set = cb_opcode >> 3 & 0x07;
-                if cb_opcode & 0x0F == 0b110 {
+                if cb_opcode & 0x07 == 0b110 {
                     // address HL
                     cycles = 16;
                     let value = self.memory.read_memory(self.registers.get_hl()) | 0b10000000 >> bit_to_set;

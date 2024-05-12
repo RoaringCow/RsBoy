@@ -56,11 +56,11 @@ impl Memory {
 
     }
     pub fn read_memory(&self, address: u16) -> u8 {
-       // print!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
-        match address {
+        println!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m", address);
+        let value = match address {
             0x0000..=0x7FFF => self.rom.rom[address as usize], // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] as u8, // VRAM
-            0xA000..=0xBFFF => 0xFF, // External RAM
+            0xA000..=0xBFFF => 0xFF, // External RAM1
             0xC000..=0xDFFF => self.wram[address as usize - 0xC000], // RAM
             0xE000..=0xFDFF => self.wram[address as usize - 0xE000], // Echo RAM
             0xFE00..=0xFE9F => self.ppu.oam[address as usize - 0xFE00],//self.gpu.read_oam(address), // OAM
@@ -111,11 +111,13 @@ impl Memory {
             #[allow(unreachable_patterns)]
             _ => panic!("address out of range"), // cant get here
 
-        }
+        };
+        println!("\x1b[38;2;0;255;0mreading memory\x1b[0m at address: \x1b[38;2;255;0;0m{:2X}\x1b[0m     value: \x1b[38;2;255;0;255m{:2X}\x1b[0m",address, value);
+        value
     }
 
     pub fn write_memory(&mut self, address: u16, value: u8) {
-        ////println!("\x1b[38;2;255;255;0mwriting memory\x1b[0m at address: \x1b[38;2;255;0;255m{:4X}\x1b[0m    value: \x1b[38;2;255;0;255m{:2X}\x1b[0m", address, value);
+        println!("\x1b[38;2;255;255;0mwriting memory\x1b[0m at address: \x1b[38;2;255;0;255m{:4X}\x1b[0m    value: \x1b[38;2;255;0;255m{:2X}\x1b[0m", address, value);
         match address {
             0x0000..=0x7FFF => self.rom.rom[address as usize] = value, // ROM
             0x8000..=0x9FFF => self.ppu.vram[address as usize - 0x8000] = value, // VRAM
@@ -175,6 +177,8 @@ impl Memory {
 
 
     pub fn dma_transfer(&mut self) {
+        println!("HOLY SHİT DMA HAPPENNİNG _______---__--__---___---");
+        std::thread::sleep(std::time::Duration::from_millis(1000));
         let source_address = (self.read_memory(0xFF46) as u16) << 8;
         for x in 0..160 {
             // transfer sprite data

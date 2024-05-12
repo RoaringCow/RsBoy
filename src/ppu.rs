@@ -340,3 +340,4 @@ pub struct Pallette {
     pub color2: u8,
     pub color3: u8,
 }
+

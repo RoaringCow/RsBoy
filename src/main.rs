@@ -18,7 +18,7 @@ const SCALE: usize = 2;
 
 #[allow(dead_code)]
 // on linux
-const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/tetris.gb";
+const ADDRESS: &str = "/home/ersan/rs_boy/test_roms/dmg-acid2.gb";
 //const ADDRESS: &str = "/Users/ersandemircan/rs_boy/test_roms/tetris.gb";
 // on Mac
 
@@ -204,9 +204,8 @@ fn main() {
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.step();
-        cpu.memory.ppu.update_display();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        if ppu_line_update >= 228 {
+        //std::thread::sleep(std::time::Duration::from_micros(500));
+        if ppu_line_update >= 114 {
             cpu.memory.ppu.update_display();
             ppu_line_update = 0;
         }
