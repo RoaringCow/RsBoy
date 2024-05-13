@@ -42,11 +42,10 @@ fn main() {
 
 
 
-    /*
 
 
 
-
+/*
     // test background
 
     /*
@@ -193,7 +192,6 @@ fn main() {
     cpu.memory.ppu.oam[2] = 0x05;
     cpu.memory.ppu.oam[3] = 0b00000000;
 
-    cpu.memory.ppu.wy = 130;
     */
     let mut full_screen_refresh = 0;
     let mut ppu_line_update = 0;
@@ -204,14 +202,16 @@ fn main() {
     //let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let _cycles = cpu.step();
-        //std::thread::sleep(std::time::Duration::from_micros(500));
-        if ppu_line_update >= 114 {
+        
+        if ppu_line_update >= 231 {
             cpu.memory.ppu.update_display();
             ppu_line_update = 0;
         }
-
         if full_screen_refresh >= 35112{
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
+            cpu.memory.ppu.oam[0] += 1;
+            cpu.memory.ppu.oam[1] += 1;
+            //cpu.memory.ppu.print_background_map();
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             full_screen_refresh = 0;
@@ -223,9 +223,6 @@ fn main() {
         ppu_line_update += 1;
     }
 }
-
-
-
 
 
 

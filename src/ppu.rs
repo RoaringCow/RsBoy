@@ -76,7 +76,7 @@ impl PPU {
             oam: [0; 0xA0],
             cycle: 0,
             ppu_mode: Ppumode::OAM,
-            lcd_control: 0b11110011,
+            lcd_control: 0b11010011,
             /*
                lcd_enable,
                window_tile_map,
@@ -305,6 +305,33 @@ impl PPU {
     pub fn write_line_to_display(&mut self) {
         for x in 0..160 {
             self.display[self.ly as usize * 160 + x] = self.buffer[((self.ly as usize + self.scy as usize) % 256) * 256 + (x + self.scx as usize) % 256];
+        }
+    }
+
+
+    pub fn print_background_map(&mut self) {
+        for y in 0..32 {
+            for x in 0..32 {
+                let offset = match (self.lcd_control >> 3) & 1 == 0{
+                    true => 0x9800,
+                    false => 0x9C00,
+                };
+                let address = offset + x + y * 32;
+                let value = self.vram[address as usize - 0x8000];
+                print!(" {:x} ", value);
+
+            }
+            println!();
+        }
+    }
+
+    //scary
+    pub fn dump_buffer_data(&mut self) {
+        for y in 0..256 {
+            for x in 0..256 {
+                print!(" {:x} ", self.buffer[y * 256 +x]);
+            }
+            println!();
         }
     }
 
