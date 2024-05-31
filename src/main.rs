@@ -14,7 +14,7 @@ use std::{thread, time};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
-const SCALE: usize = 2;
+const SCALE: usize = 4;
 
 #[allow(dead_code)]
 // on linux
@@ -208,10 +208,12 @@ fn main() {
             ppu_line_update = 0;
         }
         if full_screen_refresh >= 35112{
+            cpu.memory.ppu.dump_oam_data();
+            cpu.memory.ppu.print_background_map();
             window.update_with_buffer(&cpu.memory.ppu.display, WIDTH, HEIGHT).unwrap();
-            cpu.memory.ppu.oam[0] += 1;
-            cpu.memory.ppu.oam[1] += 1;
-            //cpu.memory.ppu.print_background_map();
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            //cpu.memory.ppu.oam[0] += 1;
+            //cpu.memory.ppu.oam[1] += 1;
             println!("display updated in: {:?}", now.elapsed());
             now = time::Instant::now();
             full_screen_refresh = 0;

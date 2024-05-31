@@ -324,6 +324,25 @@ impl PPU {
             println!();
         }
     }
+    pub fn dump_oam_data(&mut self) {
+        for sprite in 0..40 {
+            println!("{}:( {:x} {:x} {:x} {:b})", sprite, self.oam[sprite * 4], self.oam[sprite * 4 + 1], self.oam[sprite * 4 + 2], self.oam[sprite * 4 + 3]);
+        }
+    }
+    pub fn print_tile_in_color(&mut self, tile_number: u16) {
+        todo!("olimpiyat çalışmam lazım renkli sprite falan printle işte");
+        for tile_x in 0..8 {
+            // map the color code to a value that minifb can use
+            match ((tile_data_low >> (7 - tile_x)) & 1) << 1 | ((tile_data_high >> (7 - tile_x)) & 1) {
+                0 => print!("\x1b[38;2;0;0;0m \x1b[0m"),
+                1 => print!("\x1b[38;2;85;85;85m \x1b[0m"),
+                2 => print!("\x1b[38;2;170;170;170m \x1b[0m"),
+                3 => print!("\x1b[38;2;255;255;255m \x1b[0m"),
+                _ => (),
+            };
+        }
+
+    }
 
     //scary
     pub fn dump_buffer_data(&mut self) {

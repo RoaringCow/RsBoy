@@ -182,7 +182,7 @@ impl CPU {
 
     #[allow(dead_code)]
     pub fn run_instruction(&mut self, opcode: u8) -> u8{
-        println!("pc: {:x} ->  {:x} | a: {:x}, b: {:x}, c: {:x}, d: {:x}, e: {:x}, hl: {:x}, sp: {:x}   f: {:b}", self.registers.pc, opcode, self.registers.a, self.registers.b, self.registers.c, self.registers.d, self.registers.e, self.registers.get_hl(), self.registers.sp, self.registers.f);
+        //println!("pc: {:x} ->  {:x} | a: {:x}, b: {:x}, c: {:x}, d: {:x}, e: {:x}, hl: {:x}, sp: {:x}   f: {:b}", self.registers.pc, opcode, self.registers.a, self.registers.b, self.registers.c, self.registers.d, self.registers.e, self.registers.get_hl(), self.registers.sp, self.registers.f);
         let cycles: u8 = match opcode >> 6 {
             // I couldn't use a pattern in this part
             // so i will just make it manually
